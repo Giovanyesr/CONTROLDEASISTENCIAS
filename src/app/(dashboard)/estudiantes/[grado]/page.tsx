@@ -18,7 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   Search, Loader2, Plus, GraduationCap, ArrowLeft, X,
   CalendarDays, Clock, UserCheck, AlertCircle, FileText, ShieldCheck,
-  RefreshCw, Upload, ChevronLeft, ChevronRight, Eye, EyeOff,
+  RefreshCw, Upload, ChevronLeft, ChevronRight, Eye, EyeOff, Trash2,
 } from 'lucide-react';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -103,6 +103,10 @@ export default function GradoPage() {
 
   const [selectedStudentDetail, setSelectedStudentDetail] = useState<any>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+
+  const [deleteTarget, setDeleteTarget] = useState<any>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const noLaborablesRef = useRef<Set<string>>(new Set());
 
@@ -538,6 +542,13 @@ export default function GradoPage() {
                           >
                             <RefreshCw className="h-2.5 w-2.5" />
                           </button>
+                          <button
+                            className="ml-1 text-muted-foreground/40 hover:text-red-500 transition-colors"
+                            onClick={(e) => { e.stopPropagation(); setDeleteTarget(est); setDeleteOpen(true); }}
+                            title="Eliminar"
+                          >
+                            <Trash2 className="h-2.5 w-2.5" />
+                          </button>
                         </div>
                       </td>
                       <td className="hidden sm:table-cell px-2 sm:px-4 py-2 sm:py-3">
@@ -557,6 +568,13 @@ export default function GradoPage() {
                             title={est.rol === 'alumno' ? 'Convertir a Brigadier' : 'Convertir a Alumno'}
                           >
                             <RefreshCw className="h-3 w-3" />
+                          </button>
+                          <button
+                            className="h-6 w-6 flex items-center justify-center rounded-md text-muted-foreground/40 hover:text-red-500 hover:bg-red-50 transition-all"
+                            onClick={(e) => { e.stopPropagation(); setDeleteTarget(est); setDeleteOpen(true); }}
+                            title="Eliminar"
+                          >
+                            <Trash2 className="h-3 w-3" />
                           </button>
                         </div>
                       </td>
@@ -929,6 +947,44 @@ export default function GradoPage() {
             <AlertDialogCancel disabled={roleChanging}>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleRoleChange} disabled={roleChanging}>
               {roleChanging ? 'Cambiando...' : 'Confirmar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminar Estudiante</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTarget && (
+                <>¿Estás seguro de eliminar a <strong>{deleteTarget.nombres} {deleteTarget.apellidos}</strong> (DNI: {deleteTarget.dni})? Se eliminarán todos sus registros de asistencia y no se puede deshacer.</>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async () => {
+                if (!deleteTarget) return;
+                setDeleting(true);
+                try {
+                  const res = await fetch(`/api/auth/eliminar-alumno?id=${deleteTarget.id}`, { method: 'DELETE' });
+                  if (!res.ok) { const err = await res.json(); throw new Error(err.error); }
+                  toast.success('Estudiante eliminado correctamente');
+                  setDeleteOpen(false);
+                  setDeleteTarget(null);
+                  fetchPersonas();
+                } catch (err: any) {
+                  toast.error(err.message);
+                } finally {
+                  setDeleting(false);
+                }
+              }}
+            >
+              {deleting ? 'Eliminando...' : 'Sí, eliminar'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
