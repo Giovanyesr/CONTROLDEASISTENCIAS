@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sin conexión</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; background: #FAF8F5; color: #2C2C2C; }
+    .container { text-align: center; padding: 2rem; max-width: 360px; }
+    .icon { width: 64px; height: 64px; background: #8B6914; border-radius: 16px; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; }
+    .icon svg { width: 36px; height: 36px; fill: white; }
+    h1 { font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem; color: #2C2C2C; }
+    p { font-size: 0.875rem; color: #6B5B4E; line-height: 1.5; }
+    .retry { margin-top: 1.5rem; padding: 0.75rem 2rem; background: #8B6914; color: white; border: none; border-radius: 12px; font-size: 0.875rem; font-weight: 600; cursor: pointer; }
+    .retry:active { transform: scale(0.97); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon">
+      <svg viewBox="0 0 24 24"><path d="M12 2L2 7v10l10 5 10-5V7l-10-5zM6.5 8L12 5l5.5 3v4L12 15l-5.5-3V8z"/></svg>
+    </div>
+    <h1>Sin conexión</h1>
+    <p>Verifica tu conexión a internet e intenta nuevamente.</p>
+    <button class="retry" onclick="location.reload()">Reintentar</button>
+  </div>
+</body>
+</html>

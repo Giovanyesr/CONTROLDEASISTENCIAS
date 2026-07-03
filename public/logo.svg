@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 60" fill="none">
+  <rect x="6" y="8" width="36" height="44" rx="10" fill="#8B6914"/>
+  <path d="M12 18h24v2H12v-2zm0 6h24v2H12v-2zm0 6h18v2H12v-2zm0 6h14v2H12v-2z" fill="#ffffff" opacity="0.2"/>
+  <text x="24" y="37" font-family="Georgia, 'Times New Roman', serif" font-size="16" font-weight="800" fill="#ffffff" text-anchor="middle">30916</text>
+  <text x="100" y="28" font-family="Georgia, 'Times New Roman', serif" font-size="14" font-weight="700" fill="#4a4a4a" letter-spacing="-0.3">San Francisco</text>
+  <text x="100" y="44" font-family="Georgia, 'Times New Roman', serif" font-size="14" font-weight="700" fill="#4a4a4a" letter-spacing="-0.3">de Asís</text>
+  <text x="100" y="56" font-family="Inter, system-ui, sans-serif" font-size="7" font-weight="600" fill="#8B6914" letter-spacing="2">CONTROL DE ASISTENCIA</text>
+</svg>

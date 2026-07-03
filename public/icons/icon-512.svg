@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <rect width="512" height="512" rx="80" fill="#8B6914"/>
+  <rect x="96" y="128" width="320" height="268" rx="24" fill="#ffffff" opacity="0.95"/>
+  <rect x="140" y="182" width="232" height="14" rx="7" fill="#8B6914" opacity="0.3"/>
+  <rect x="140" y="218" width="232" height="14" rx="7" fill="#8B6914" opacity="0.3"/>
+  <rect x="140" y="254" width="192" height="14" rx="7" fill="#8B6914" opacity="0.3"/>
+  <rect x="140" y="290" width="148" height="14" rx="7" fill="#8B6914" opacity="0.3"/>
+  <text x="256" y="296" font-family="Georgia, serif" font-size="72" font-weight="800" fill="#8B6914" text-anchor="middle">30916</text>
+</svg>

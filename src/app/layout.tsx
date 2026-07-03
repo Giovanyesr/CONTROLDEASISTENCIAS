@@ -3,6 +3,8 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { Toaster } from 'react-hot-toast';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { ServiceWorkerRegister } from '@/components/ServiceWorkerRegister';
+import { PwaInstallPrompt } from '@/components/PwaInstallPrompt';
 
 const inter = Inter({
   variable: '--font-inter',
@@ -18,12 +20,12 @@ export const metadata: Metadata = {
   description: 'Sistema de control de asistencia escolar - I.E. 30916 San Francisco de Asís',
   manifest: '/manifest.json',
   icons: {
-    icon: '/favicon.ico',
-    apple: '/favicon.ico',
+    icon: '/favicon.svg',
+    apple: '/favicon.svg',
   },
   appleWebApp: {
     capable: true,
-    statusBarStyle: 'default',
+    statusBarStyle: 'black-translucent',
     title: 'Asistencia',
   },
 };
@@ -34,6 +36,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  viewportFit: 'cover',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -62,6 +65,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               },
             }}
           />
+          <ServiceWorkerRegister />
+          <PwaInstallPrompt />
         </TooltipProvider>
       </body>
     </html>
