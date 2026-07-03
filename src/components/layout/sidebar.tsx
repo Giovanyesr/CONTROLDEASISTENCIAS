@@ -66,28 +66,33 @@ export function Sidebar() {
           open ? 'translate-x-0' : '-translate-x-full'
         )}
       >
-        <div className="flex items-center justify-between border-b border-border p-4">
-          <Link
-            href="/dashboard"
-            className="flex items-center gap-3 group"
-            onClick={() => setOpen(false)}
-          >
-            <Image
-              src="/logo.png"
-              alt="Logo"
-              width={160}
-              height={40}
-              className="h-8 w-auto transition-opacity duration-200 group-hover:opacity-80"
-              priority
-            />
-          </Link>
-          <button
-            onClick={() => setOpen(false)}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground/60 transition-colors hover:bg-primary/10 hover:text-foreground lg:hidden"
-            aria-label="Cerrar menú"
-          >
-            <X className="h-4 w-4" />
-          </button>
+        <div className="flex flex-col border-b border-border p-4">
+          <div className="flex items-center justify-between">
+            <Link
+              href="/dashboard"
+              className="flex items-center gap-3 group"
+              onClick={() => setOpen(false)}
+            >
+              <Image
+                src="/logo.png"
+                alt="Logo"
+                width={160}
+                height={40}
+                className="h-8 w-auto transition-opacity duration-200 group-hover:opacity-80"
+                priority
+              />
+            </Link>
+            <button
+              onClick={() => setOpen(false)}
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground/60 transition-colors hover:bg-primary/10 hover:text-foreground lg:hidden"
+              aria-label="Cerrar menú"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <p className="mt-1.5 text-xs font-medium text-primary/70 tracking-wide">
+            I.E. 30916 San Francisco de Asís
+          </p>
         </div>
 
         <nav className="flex-1 space-y-0.5 overflow-y-auto p-3 pt-4">

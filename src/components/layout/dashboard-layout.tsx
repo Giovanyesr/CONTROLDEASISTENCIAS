@@ -74,6 +74,10 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       <Sidebar />
       <main className="flex min-w-0 flex-1 flex-col">
         <div className="flex items-center gap-2 border-b border-border bg-card/50 px-6 py-3">
+          <span className="hidden text-xs font-semibold text-primary/70 tracking-wide mr-2 sm:block">
+            I.E. 30916 San Francisco de Asís
+          </span>
+          <span className="hidden text-xs text-muted-foreground/40 sm:block">|</span>
           <Link
             href="/dashboard"
             className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-all hover:bg-muted hover:text-foreground active:scale-95"
