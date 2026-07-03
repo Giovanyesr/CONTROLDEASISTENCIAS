@@ -1,6 +1,6 @@
 const CACHE = 'asistencia-v2';
 const STATIC = [
-  '/offline',
+  '/offline.html',
   '/manifest.json',
   '/icons/icon-192.svg',
   '/icons/icon-512.svg',
@@ -36,7 +36,7 @@ self.addEventListener('fetch', (e) => {
   // Navigations: network first, fallback to offline
   if (request.mode === 'navigate') {
     e.respondWith(
-      fetch(request).catch(() => caches.match('/offline'))
+      fetch(request).catch(() => caches.match('/offline.html'))
     );
     return;
   }
