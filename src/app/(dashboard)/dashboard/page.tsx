@@ -136,7 +136,7 @@ export default function DashboardPage() {
         const { data: alumno } = await supabase
           .from('alumnos')
           .select('created_at')
-          .eq('id', user.id)
+          .eq('perfil_id', user.id)
           .single();
         if (alumno?.created_at) {
           setFechaRegistro(new Date(alumno.created_at).toISOString().split('T')[0]);
