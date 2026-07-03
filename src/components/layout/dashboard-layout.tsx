@@ -49,10 +49,10 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-9 w-9 animate-spin rounded-full border-[3px] border-primary border-t-transparent" />
-          <p className="text-sm text-muted-foreground animate-pulse">Cargando...</p>
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-[#FAF8F5] to-background">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-primary/30 border-t-primary" />
+          <p className="text-sm text-muted-foreground/70 animate-breathe">Cargando...</p>
         </div>
       </div>
     );
@@ -73,11 +73,11 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-screen bg-background">
       <Sidebar />
       <main className="flex min-w-0 flex-1 flex-col">
-        <div className="flex items-center gap-2 border-b border-border bg-card/50 px-6 py-3">
-          <span className="text-sm font-semibold text-primary tracking-wide mr-3 shrink-0">
+        <div className="flex items-center gap-2 border-b border-border/80 bg-card/70 px-6 py-3 shadow-sm">
+          <span className="text-sm font-semibold text-primary/80 tracking-wide mr-3 shrink-0">
             I.E. 30916 San Francisco de Asís
           </span>
-          <span className="text-xs text-muted-foreground/40">|</span>
+          <span className="text-xs text-muted-foreground/30">|</span>
           <Link
             href="/dashboard"
             className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-all hover:bg-muted hover:text-foreground active:scale-95"

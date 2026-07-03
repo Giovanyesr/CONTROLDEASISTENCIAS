@@ -47,7 +47,7 @@ export function Sidebar() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="fixed left-4 top-4 z-50 flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/30 transition-all duration-200 hover:bg-primary-dark hover:shadow-xl hover:shadow-primary/40 active:scale-95 lg:hidden"
+        className="fixed left-4 top-4 z-50 flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary-dark text-primary-foreground shadow-lg shadow-primary/30 transition-all duration-200 hover:shadow-xl hover:shadow-primary/40 active:scale-95 lg:hidden"
         aria-label="Abrir menú"
       >
         <Menu className="h-5 w-5" />
@@ -90,7 +90,7 @@ export function Sidebar() {
               <X className="h-4 w-4" />
             </button>
           </div>
-          <p className="mt-1.5 text-xs font-medium text-primary/70 tracking-wide">
+          <p className="mt-1.5 text-xs font-medium text-primary/60 tracking-wider uppercase">
             I.E. 30916 San Francisco de Asís
           </p>
         </div>
@@ -108,22 +108,24 @@ export function Sidebar() {
                 className={cn(
                   'group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 animate-fade-in',
                   active
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-muted-foreground hover:bg-primary/10 hover:text-foreground'
+                    ? 'bg-gradient-to-r from-primary/10 to-primary/5 text-primary shadow-sm'
+                    : 'text-muted-foreground hover:bg-primary/[0.06] hover:text-foreground'
                 )}
                 style={{ animationDelay: `${idx * 30}ms` }}
               >
                 {active && (
-                  <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-r-full bg-primary-foreground/30" />
+                  <span className="absolute left-0 top-1/2 h-6 w-0.5 -translate-y-1/2 rounded-r-full bg-primary" />
                 )}
-                <Icon className={cn(
-                  'h-5 w-5 shrink-0 transition-transform duration-200',
-                  !active && 'group-hover:scale-110'
-                )} />
+                <div className={cn(
+                  'flex h-8 w-8 items-center justify-center rounded-lg transition-all duration-200',
+                  active ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-transparent group-hover:bg-primary/10'
+                )}>
+                  <Icon className={cn(
+                    'h-4 w-4 shrink-0 transition-transform duration-200',
+                    !active && 'group-hover:scale-110'
+                  )} />
+                </div>
                 <span>{item.label}</span>
-                {active && (
-                  <ChevronRight className="ml-auto h-4 w-4 shrink-0 opacity-60" />
-                )}
               </Link>
             );
           })}
@@ -131,12 +133,12 @@ export function Sidebar() {
 
         {user && (
           <div className="border-t border-border p-3">
-            <div className="mb-2 flex items-center gap-3 rounded-xl px-2 py-2">
-              <Avatar className="h-9 w-9 ring-2 ring-primary/30">
+            <div className="mb-2 flex items-center gap-3 rounded-xl px-2 py-2 hover:bg-primary/[0.03] transition-colors">
+              <Avatar className="h-9 w-9 ring-2 ring-primary/20">
                 {user.foto_url ? (
                   <AvatarImage src={user.foto_url} alt="Foto" className="object-cover" />
                 ) : (
-                  <AvatarFallback className="bg-primary text-xs font-semibold text-primary-foreground">
+                  <AvatarFallback className="bg-gradient-to-br from-primary to-primary-dark text-xs font-semibold text-primary-foreground">
                     {user.nombres?.charAt(0)}{user.apellidos?.charAt(0)}
                   </AvatarFallback>
                 )}
@@ -145,7 +147,11 @@ export function Sidebar() {
                 <p className="truncate text-sm font-medium text-foreground">
                   {user.nombres} {user.apellidos}
                 </p>
-                <p className="truncate text-xs capitalize text-muted-foreground">
+                <p className="truncate text-xs capitalize text-muted-foreground/70 flex items-center gap-1">
+                  <span className={cn(
+                    'inline-block h-1.5 w-1.5 rounded-full',
+                    user.rol === 'brigadier' ? 'bg-amber-500' : 'bg-sky-500'
+                  )} />
                   {user.rol === 'brigadier' ? 'Brigadier' : 'Alumno'}
                 </p>
               </div>
@@ -153,7 +159,7 @@ export function Sidebar() {
             <Button
               variant="ghost"
               size="sm"
-              className="w-full justify-start gap-2 text-muted-foreground transition-all duration-200 hover:bg-primary/10 hover:text-foreground active:scale-[0.98]"
+              className="w-full justify-start gap-2 rounded-lg text-muted-foreground/70 transition-all duration-200 hover:bg-red-50 hover:text-red-600 active:scale-[0.98]"
               onClick={logout}
             >
               <LogOut className="h-4 w-4" />

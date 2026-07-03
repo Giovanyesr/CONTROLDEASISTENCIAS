@@ -37,8 +37,8 @@ export function MobileBottomNav() {
   const top = visible.sort((a, b) => (priority[a.href.slice(1)] ?? 99) - (priority[b.href.slice(1)] ?? 99)).slice(0, 5);
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-[#E0D5C0] bg-white/95 backdrop-blur-lg lg:hidden safe-area-bottom">
-      <div className="flex items-center justify-around px-2 py-1">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border/80 bg-white/90 backdrop-blur-xl lg:hidden safe-area-bottom shadow-[0_-4px_20px_-6px_rgba(0,0,0,0.06)]">
+      <div className="flex items-center justify-around px-1 py-0.5">
         {top.map((item) => {
           const Icon = item.icon;
           const active = pathname === item.href || pathname.startsWith(item.href + '/');
@@ -47,15 +47,20 @@ export function MobileBottomNav() {
               key={item.href}
               href={item.href}
               className={cn(
-                'flex flex-col items-center gap-0.5 rounded-xl px-3 py-1.5 text-[10px] font-medium transition-all duration-200 active:scale-90',
+                'relative flex flex-col items-center gap-0.5 rounded-xl px-3 py-1.5 text-[10px] font-medium transition-all duration-200 active:scale-90',
                 active
                   ? 'text-primary'
-                  : 'text-muted-foreground hover:text-foreground'
+                  : 'text-muted-foreground/60 hover:text-foreground'
               )}
             >
-              <Icon className={cn('h-5 w-5', active && 'drop-shadow-sm')} />
+              <div className={cn(
+                'flex items-center justify-center rounded-lg p-1 transition-all duration-200',
+                active && 'bg-primary/10'
+              )}>
+                <Icon className={cn('h-5 w-5', active && 'drop-shadow-sm')} />
+              </div>
               <span>{item.label}</span>
-              {active && <span className="h-0.5 w-4 rounded-full bg-primary mt-0.5" />}
+              {active && <span className="absolute -top-0.5 h-0.5 w-6 rounded-full bg-primary" />}
             </Link>
           );
         })}
