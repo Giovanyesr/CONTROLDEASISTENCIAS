@@ -347,26 +347,28 @@ export default function HistorialPage() {
                   const noLaborable = !esLaborable(fecha);
                   const esFuturo = fecha > peruNow.toISOString().split('T')[0];
                   const hoy = fecha === peruNow.toISOString().split('T')[0];
-                  const clickable = !esFuturo && !noLaborable;
+                  const esPasadoLaborable = !esFuturo && !noLaborable;
+                  const estado = registro?.estado || (esPasadoLaborable ? 'falta_injustificada' : undefined);
+                  const clickable = !!estado;
                   return (
                     <div
                       key={dia}
                       onClick={() => {
-                        if (clickable) {
-                          setDiaSeleccionado({ fecha, ...(registro || {}) });
+                        if (clickable && estado) {
+                          const dayRecord = registro ? { ...registro, estado } : { estado, fecha, hora: '00:00:00' };
+                          setDiaSeleccionado({ ...dayRecord, fecha });
                           setDiaOpen(true);
                         }
                       }}
                       className={`relative flex aspect-square items-center justify-center rounded-lg text-xs font-medium transition-colors
                         ${clickable ? 'cursor-pointer hover:ring-1 hover:ring-primary/40' : ''}
                         ${hoy ? 'ring-2 ring-primary ring-offset-1' : ''}
-                        ${esFuturo ? 'text-muted-foreground/30' : noLaborable && !registro ? 'text-muted-foreground/20' : ''}
-                        ${registro ? estadoColor[registro.estado] || 'bg-gray-200' : !esFuturo && !noLaborable ? 'bg-gray-100 text-gray-400' : ''}
+                        ${esFuturo ? 'text-muted-foreground/30' : noLaborable ? 'text-muted-foreground/20' : ''}
+                        ${estado ? (estadoColor[estado] || 'bg-gray-200') : 'text-muted-foreground/20'}
                       `}
-                      title={registro ? `${dia} de ${mesesNombres[parseInt(filtroMes)]} - ${getEstadoLabel(registro.estado)}` : `${dia} de ${mesesNombres[parseInt(filtroMes)]}`}
                     >
                       <span className="relative z-10">{dia}</span>
-                      {registro && <span className="absolute -top-0.5 -right-0.5 text-[8px] font-bold">{estadoLabel[registro.estado]}</span>}
+                      {estado && <span className="absolute -top-0.5 -right-0.5 text-[8px] font-bold">{estadoLabel[estado]}</span>}
                     </div>
                   );
                 })}
