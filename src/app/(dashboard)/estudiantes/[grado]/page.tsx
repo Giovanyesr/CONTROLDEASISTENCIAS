@@ -142,6 +142,13 @@ export default function GradoPage() {
     const ids = filtered.map((e: any) => e.id);
     let asistenciasMap: Record<string, any[]> = {};
 
+    const fechaRegistroMap: Record<string, string> = {};
+    filtered.forEach((e: any) => {
+      if (e.alumno?.created_at) {
+        fechaRegistroMap[e.id] = new Date(e.alumno.created_at).toISOString().split('T')[0];
+      }
+    });
+
     if (ids.length > 0) {
       const { data: records } = await supabase
         .from('asistencias')
@@ -170,9 +177,11 @@ export default function GradoPage() {
       asistenciasMap = Object.fromEntries(
         ids.map(id => {
           const studentLookup = lookup[id] || {};
+          const registroFecha = fechaRegistroMap[id];
           return [id, last5Days.map(fecha => {
             const existing = studentLookup[fecha];
             if (existing) return existing;
+            if (registroFecha && fecha < registroFecha) return null;
             return fecha < todayStr ? { fecha, estado: 'falta_injustificada', alumno_id: id, id: `auto-${id}-${fecha}` } : null;
           }).filter(Boolean)];
         })
@@ -207,7 +216,7 @@ export default function GradoPage() {
     );
   }, [estudiantes, search]);
 
-  const fetchMesAsistencias = useCallback(async (alumnoId: string, mes: number, ano: number) => {
+  const fetchMesAsistencias = useCallback(async (alumnoId: string, mes: number, ano: number, fechaRegistro?: string) => {
     const primerDiaStr = `${ano}-${String(mes + 1).padStart(2, '0')}-01`;
     setHistorialLoading(true);
     const { data } = await supabase
@@ -227,6 +236,7 @@ export default function GradoPage() {
         const fecha = `${ano}-${String(mes + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
         if (!esLaborable(fecha)) continue;
         if (fecha > peruNow.toISOString().split('T')[0]) continue;
+        if (fechaRegistro && fecha < fechaRegistro) continue;
 
         const estado = map[fecha] || 'falta_injustificada';
         map[fecha] = estado;
@@ -252,7 +262,7 @@ export default function GradoPage() {
     setHistorialMes(peruNow.getMonth());
     setHistorialAno(peruNow.getFullYear());
     setHistorialOpen(true);
-    await fetchMesAsistencias(est.id, peruNow.getMonth(), peruNow.getFullYear());
+    await fetchMesAsistencias(est.id, peruNow.getMonth(), peruNow.getFullYear(), est.alumno?.created_at ? new Date(est.alumno.created_at).toISOString().split('T')[0] : undefined);
   };
 
   const cambiarMes = async (delta: number) => {
@@ -260,14 +270,14 @@ export default function GradoPage() {
     if (nuevoMes < 0) {
       setHistorialAno(historialAno - 1);
       setHistorialMes(11);
-      if (selectedStudent) await fetchMesAsistencias(selectedStudent.id, 11, historialAno - 1);
+      if (selectedStudent) await fetchMesAsistencias(selectedStudent.id, 11, historialAno - 1, selectedStudent.alumno?.created_at ? new Date(selectedStudent.alumno.created_at).toISOString().split('T')[0] : undefined);
     } else if (nuevoMes > 11) {
       setHistorialAno(historialAno + 1);
       setHistorialMes(0);
-      if (selectedStudent) await fetchMesAsistencias(selectedStudent.id, 0, historialAno + 1);
+      if (selectedStudent) await fetchMesAsistencias(selectedStudent.id, 0, historialAno + 1, selectedStudent.alumno?.created_at ? new Date(selectedStudent.alumno.created_at).toISOString().split('T')[0] : undefined);
     } else {
       setHistorialMes(nuevoMes);
-      if (selectedStudent) await fetchMesAsistencias(selectedStudent.id, nuevoMes, historialAno);
+      if (selectedStudent) await fetchMesAsistencias(selectedStudent.id, nuevoMes, historialAno, selectedStudent.alumno?.created_at ? new Date(selectedStudent.alumno.created_at).toISOString().split('T')[0] : undefined);
     }
   };
 
@@ -388,7 +398,7 @@ export default function GradoPage() {
       setJustifyMotivo('');
       setJustifyEvidencia(null);
       await fetchPersonas();
-      if (selectedStudent) await fetchMesAsistencias(selectedStudent.id, historialMes, historialAno);
+      if (selectedStudent) await fetchMesAsistencias(selectedStudent.id, historialMes, historialAno, selectedStudent.alumno?.created_at ? new Date(selectedStudent.alumno.created_at).toISOString().split('T')[0] : undefined);
     } catch (err: any) { toast.error(err.message); }
     finally { setJustifySubiendo(false); }
   };
@@ -751,7 +761,9 @@ export default function GradoPage() {
                     const noLaborable = !esLaborable(fecha);
                     const esFuturo = fecha > peruNow.toISOString().split('T')[0];
                     const esPasadoLaborable = !esFuturo && !noLaborable;
-                    const estado = rawEstado || (esPasadoLaborable ? 'falta_injustificada' : undefined);
+                    const fechaRegistroEst = selectedStudent?.alumno?.created_at ? new Date(selectedStudent.alumno.created_at).toISOString().split('T')[0] : null;
+                    const antesDeRegistro = fechaRegistroEst && fecha < fechaRegistroEst;
+                    const estado = rawEstado || (esPasadoLaborable && !antesDeRegistro ? 'falta_injustificada' : undefined);
                     const clickable = !!estado;
                     return (
                       <div
