@@ -203,16 +203,47 @@ export default function HistorialPage() {
     return () => abortController.abort();
   }, [fetchHistorial]);
 
+  const buildExportRows = useCallback(() => {
+    if (esBrigadier) {
+      return registros.map((r) => ({
+        DNI: r.alumno?.dni || '',
+        Estudiante: `${r.alumno?.nombres || ''} ${r.alumno?.apellidos || ''}`,
+        Fecha: r.fecha,
+        Hora: formatTime(r.hora),
+        Estado: getEstadoLabel(r.estado),
+        Brigadier: r.brigadier ? `${r.brigadier.nombres} ${r.brigadier.apellidos}` : '',
+      }));
+    }
+    // For students: build from mesAsistencias + auto-fill faltas
+    const rows: any[] = [];
+    const mes = parseInt(filtroMes);
+    const ano = parseInt(filtroAno);
+    const dias = new Date(ano, mes + 1, 0).getDate();
+    const hoyStr = peruNow.toISOString().split('T')[0];
+    for (let d = 1; d <= dias; d++) {
+      const fecha = `${ano}-${String(mes + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      if (!esLaborable(fecha)) continue;
+      if (fecha > hoyStr) continue;
+      rows.push({
+        DNI: user?.dni || '',
+        Estudiante: `${user?.nombres || ''} ${user?.apellidos || ''}`,
+        Fecha: fecha,
+        Hora: '--',
+        Estado: getEstadoLabel(mesAsistencias[fecha]?.estado || 'falta_injustificada'),
+        Brigadier: mesAsistencias[fecha]?.brigadier
+          ? `${mesAsistencias[fecha].brigadier.nombres} ${mesAsistencias[fecha].brigadier.apellidos}`
+          : '—',
+      });
+    }
+    return rows;
+  }, [esBrigadier, registros, mesAsistencias, filtroMes, filtroAno, user]);
+
   const exportToPDF = useCallback(() => {
+    const rows = buildExportRows();
+    if (rows.length === 0) { toast.error('No hay datos para exportar'); return; }
     const doc = new jsPDF();
     doc.text('Historial de Asistencias', 14, 15);
-    const tableData = registros.map((r) => [
-      r.alumno?.dni || '',
-      `${r.alumno?.nombres || ''} ${r.alumno?.apellidos || ''}`,
-      r.fecha,
-      formatTime(r.hora),
-      getEstadoLabel(r.estado),
-    ]);
+    const tableData = rows.map((r) => [r.DNI, r.Estudiante, r.Fecha, r.Hora, r.Estado]);
     (doc as any).autoTable({
       head: [['DNI', 'Estudiante', 'Fecha', 'Hora', 'Estado']],
       body: tableData,
@@ -220,23 +251,17 @@ export default function HistorialPage() {
     });
     doc.save(`historial-${new Date().toISOString().split('T')[0]}.pdf`);
     toast.success('PDF exportado');
-  }, [registros]);
+  }, [buildExportRows]);
 
   const exportToExcel = useCallback(() => {
-    const data = registros.map((r) => ({
-      DNI: r.alumno?.dni,
-      Estudiante: `${r.alumno?.nombres} ${r.alumno?.apellidos}`,
-      Fecha: r.fecha,
-      Hora: formatTime(r.hora),
-      Estado: getEstadoLabel(r.estado),
-      Brigadier: r.brigadier ? `${r.brigadier?.nombres} ${r.brigadier?.apellidos}` : '',
-    }));
+    const data = buildExportRows();
+    if (data.length === 0) { toast.error('No hay datos para exportar'); return; }
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Historial');
     XLSX.writeFile(wb, `historial-${new Date().toISOString().split('T')[0]}.xlsx`);
     toast.success('Excel exportado');
-  }, [registros]);
+  }, [buildExportRows]);
 
   const totalPages = Math.ceil(total / pageSize);
   const colSpan = esBrigadier ? 6 : 4;
@@ -483,30 +508,32 @@ export default function HistorialPage() {
                   </div>
                   <p className="text-lg font-semibold text-foreground">{getEstadoLabel(diaSeleccionado.estado)}</p>
                 </div>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3 rounded-xl border bg-card p-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                      <Clock className="h-5 w-5 text-primary" />
+                {diaSeleccionado.hora !== '00:00:00' && (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3 rounded-xl border bg-card p-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                        <Clock className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Hora de registro</p>
+                        <p className="font-semibold text-foreground">{formatTime(diaSeleccionado.hora)}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Hora de registro</p>
-                      <p className="font-semibold text-foreground">{formatTime(diaSeleccionado.hora)}</p>
+                    <div className="flex items-center gap-3 rounded-xl border bg-card p-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                        <UserCheck className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Registrado por</p>
+                        <p className="font-semibold text-foreground">
+                          {diaSeleccionado.brigadier
+                            ? `${diaSeleccionado.brigadier.nombres} ${diaSeleccionado.brigadier.apellidos}`
+                            : 'Brigadier'}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 rounded-xl border bg-card p-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                      <UserCheck className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Registrado por</p>
-                      <p className="font-semibold text-foreground">
-                        {diaSeleccionado.brigadier
-                          ? `${diaSeleccionado.brigadier.nombres} ${diaSeleccionado.brigadier.apellidos}`
-                          : 'Brigadier'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                )}
 
                 {diaSeleccionado.estado === 'falta_justificada' && (
                   <div className="space-y-3 pt-2 border-t border-border">
