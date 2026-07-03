@@ -472,15 +472,16 @@ export default function GradoPage() {
             <table className="w-full">
               <thead>
                 <tr className="border-b bg-muted/50 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  <th className="px-4 py-3 w-10"></th>
-                  <th className="px-4 py-3">Apellidos y Nombres</th>
-                  <th className="px-4 py-3">Rol</th>
-                  <th className="px-4 py-3 text-center" colSpan={5}>
-                    Últimos 5 días
-                    <div className="flex items-center justify-center gap-2 mt-1">
-                      <span className="inline-block h-2 w-2 rounded-sm bg-emerald-500" title="Asistió" />
-                      <span className="inline-block h-2 w-2 rounded-sm bg-amber-400" title="Tardanza" />
-                      <span className="inline-block h-2 w-2 rounded-sm bg-red-500" title="Falta" />
+                  <th className="px-2 sm:px-4 py-2 sm:py-3 w-8 sm:w-10"></th>
+                  <th className="px-2 sm:px-4 py-2 sm:py-3">Apellidos y Nombres</th>
+                  <th className="hidden sm:table-cell px-2 sm:px-4 py-2 sm:py-3">Rol</th>
+                  <th className="px-2 sm:px-4 py-2 sm:py-3 text-center" colSpan={5}>
+                    <span className="hidden sm:inline">Últimos 5 días</span>
+                    <span className="sm:hidden">5d</span>
+                    <div className="flex items-center justify-center gap-1 sm:gap-2 mt-1">
+                      <span className="inline-block h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-sm bg-emerald-500" title="Asistió" />
+                      <span className="inline-block h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-sm bg-amber-400" title="Tardanza" />
+                      <span className="inline-block h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-sm bg-red-500" title="Falta" />
                     </div>
                   </th>
                 </tr>
@@ -495,22 +496,41 @@ export default function GradoPage() {
                       onClick={() => openDetail(est)}
                       style={{ animationDelay: `${idx * 30}ms` }}
                     >
-                      <td className="px-4 py-3">
-                        <Avatar className="h-9 w-9 ring-2 ring-border">
+                      <td className="px-2 sm:px-4 py-2 sm:py-3">
+                        <Avatar className="h-8 w-8 sm:h-9 sm:w-9 ring-2 ring-border">
                           {est.foto_url ? <AvatarImage src={est.foto_url} alt="" className="object-cover" /> : (
-                            <AvatarFallback className="bg-primary/10 text-xs font-medium text-primary">
+                            <AvatarFallback className="bg-primary/10 text-[10px] sm:text-xs font-medium text-primary">
                               {est.nombres?.charAt(0)}{est.apellidos?.charAt(0)}
                             </AvatarFallback>
                           )}
                         </Avatar>
                       </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-foreground">{est.apellidos} {est.nombres}</span>
+                      <td className="px-2 sm:px-4 py-2 sm:py-3 max-w-[120px] sm:max-w-none">
+                        <div className="truncate font-medium text-foreground text-sm sm:text-base">
+                          {est.apellidos} {est.nombres}
                         </div>
-                        <div className="text-xs text-muted-foreground">{est.dni} · {est.alumno?.seccion || 'Sin sección'}</div>
+                        <div className="text-[10px] sm:text-xs text-muted-foreground truncate">{est.dni} · {est.alumno?.seccion || 'Sin sección'}</div>
+                        {/* Mobile role indicator */}
+                        <div className="flex items-center gap-1 sm:hidden mt-1">
+                          {est.rol === 'brigadier' ? (
+                            <span className="inline-flex items-center gap-0.5 rounded-md bg-purple-500/10 px-1.5 py-0.5 text-[9px] font-medium text-purple-600">
+                              <ShieldCheck className="h-2.5 w-2.5" /> BRI
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-0.5 rounded-md bg-muted px-1.5 py-0.5 text-[9px] font-medium text-muted-foreground">
+                              <GraduationCap className="h-2.5 w-2.5" /> EST
+                            </span>
+                          )}
+                          <button
+                            className="ml-auto text-muted-foreground/60 hover:text-foreground transition-colors"
+                            onClick={(e) => { e.stopPropagation(); setRoleChangeTarget(est); setRoleChangeOpen(true); }}
+                            title={est.rol === 'alumno' ? 'Convertir a Brigadier' : 'Convertir a Alumno'}
+                          >
+                            <RefreshCw className="h-2.5 w-2.5" />
+                          </button>
+                        </div>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="hidden sm:table-cell px-2 sm:px-4 py-2 sm:py-3">
                         <div className="flex items-center gap-1.5">
                           {est.rol === 'brigadier' ? (
                             <Badge variant="default" className="gap-1 rounded-md text-[10px] px-2 py-0.5 bg-purple-500 hover:bg-purple-600">
@@ -521,28 +541,26 @@ export default function GradoPage() {
                               <GraduationCap className="h-3 w-3" /> Estudiante
                             </Badge>
                           )}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                          <button
+                            className="h-6 w-6 flex items-center justify-center rounded-md text-muted-foreground/60 hover:text-foreground hover:bg-muted transition-all"
                             onClick={(e) => { e.stopPropagation(); setRoleChangeTarget(est); setRoleChangeOpen(true); }}
                             title={est.rol === 'alumno' ? 'Convertir a Brigadier' : 'Convertir a Alumno'}
                           >
                             <RefreshCw className="h-3 w-3" />
-                          </Button>
+                          </button>
                         </div>
                       </td>
                       {[0, 1, 2, 3, 4].map(i => {
                         const r = records[i];
                         return (
-                          <td key={i} className="px-2 py-3 text-center">
+                          <td key={i} className="px-1 sm:px-2 py-2 sm:py-3 text-center">
                             {r ? (
-                              <div className={`mx-auto h-8 w-8 rounded-lg ${estadoColor[r.estado] || 'bg-gray-300'} shadow-sm flex items-center justify-center transition-all duration-200 hover:scale-110 hover:shadow-md`}>
-                                <span className="text-[10px] font-bold text-white">{r.fecha?.slice(8, 10)}</span>
+                              <div className={`mx-auto h-6 w-6 sm:h-8 sm:w-8 rounded-lg ${estadoColor[r.estado] || 'bg-gray-300'} shadow-sm flex items-center justify-center transition-all duration-200 hover:scale-110 hover:shadow-md`}>
+                                <span className="text-[9px] sm:text-[10px] font-bold text-white">{r.fecha?.slice(8, 10)}</span>
                               </div>
                             ) : (
-                              <div className="mx-auto h-8 w-8 rounded-lg bg-muted border border-dashed border-border flex items-center justify-center">
-                                <span className="text-[10px] text-muted-foreground/40">-</span>
+                              <div className="mx-auto h-6 w-6 sm:h-8 sm:w-8 rounded-lg bg-muted border border-dashed border-border flex items-center justify-center">
+                                <span className="text-[9px] sm:text-[10px] text-muted-foreground/40">-</span>
                               </div>
                             )}
                           </td>
