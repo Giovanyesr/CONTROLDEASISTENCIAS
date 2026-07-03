@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, QrCode, Users, History, FileCheck, UserCircle, ShieldCheck, CalendarOff } from 'lucide-react';
+import { LayoutDashboard, QrCode, Users, History, FileCheck, UserCircle, ShieldCheck, CalendarOff, LogOut } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 
@@ -19,7 +19,7 @@ const items = [
 
 export function MobileBottomNav() {
   const pathname = usePathname();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
 
   const visible = items.filter((i) => i.roles.includes(user?.rol || ''));
 
@@ -64,6 +64,16 @@ export function MobileBottomNav() {
             </Link>
           );
         })}
+        <button
+          onClick={logout}
+          className="relative flex flex-col items-center gap-0.5 rounded-xl px-3 py-1.5 text-[10px] font-medium transition-all duration-200 active:scale-90 text-muted-foreground/40 hover:text-red-500"
+          title="Cerrar Sesión"
+        >
+          <div className="flex items-center justify-center rounded-lg p-1 transition-all duration-200">
+            <LogOut className="h-5 w-5" />
+          </div>
+          <span>Salir</span>
+        </button>
       </div>
     </nav>
   );
