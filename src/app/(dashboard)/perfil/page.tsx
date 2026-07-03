@@ -33,6 +33,9 @@ export default function PerfilPage() {
   const [apoOpen, setApoOpen] = useState(false);
   const [apoValue, setApoValue] = useState('');
   const [apoSaving, setApoSaving] = useState(false);
+  const [apoNombreOpen, setApoNombreOpen] = useState(false);
+  const [apoNombreValue, setApoNombreValue] = useState('');
+  const [apoNombreSaving, setApoNombreSaving] = useState(false);
   const [alumnoData, setAlumnoData] = useState<any>(null);
   const supabase = createClient();
 
@@ -148,6 +151,30 @@ export default function PerfilPage() {
     } finally {
       setPhotoUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleApoNombreUpdate = async () => {
+    if (!apoNombreValue.trim()) {
+      toast.error('El nombre del apoderado no puede estar vacío');
+      return;
+    }
+    setApoNombreSaving(true);
+    try {
+      const res = await fetch('/api/auth/actualizar-perfil', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: user.id, apoderado_nombre: apoNombreValue.trim() }),
+      });
+      if (!res.ok) { const err = await res.json(); throw new Error(err.error); }
+      const { data } = await supabase.from('alumnos').select('*').eq('perfil_id', user.id).maybeSingle();
+      setAlumnoData(data);
+      toast.success('Nombre del apoderado actualizado');
+      setApoNombreOpen(false);
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setApoNombreSaving(false);
     }
   };
 
@@ -306,10 +333,16 @@ export default function PerfilPage() {
                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
                       <Contact className="h-5 w-5 text-primary" />
                     </div>
-                    <div>
+                    <div className="flex-1">
                       <p className="text-xs text-muted-foreground">Apoderado</p>
-                      <p className="font-semibold text-foreground">{alumnoData.apoderado_nombre || 'Sin registro'}</p>
+                      <p className="font-semibold text-foreground">{alumnoData?.apoderado_nombre || 'Sin registro'}</p>
                     </div>
+                    <button
+                      onClick={() => { setApoNombreValue(alumnoData?.apoderado_nombre || ''); setApoNombreOpen(true); }}
+                      className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 rounded-xl border bg-card p-3.5 transition-all hover:shadow-sm">
@@ -351,6 +384,31 @@ export default function PerfilPage() {
                       <Button onClick={handleApoUpdate} disabled={apoSaving} className="gap-2">
                         {apoSaving && <Loader2 className="h-4 w-4 animate-spin" />}
                         {apoSaving ? 'Guardando...' : 'Guardar'}
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+              <Dialog open={apoNombreOpen} onOpenChange={setApoNombreOpen}>
+                <DialogContent className="sm:max-w-sm">
+                  <DialogHeader>
+                    <DialogTitle>Editar Nombre del Apoderado</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 py-2">
+                    <div className="space-y-2">
+                      <Label>Nombre completo del apoderado</Label>
+                      <Input
+                        value={apoNombreValue}
+                        onChange={(e) => setApoNombreValue(e.target.value)}
+                        placeholder="Carlos Rodríguez"
+                      />
+                    </div>
+                    <div className="flex justify-end gap-3 pt-2">
+                      <Button variant="outline" onClick={() => setApoNombreOpen(false)} disabled={apoNombreSaving}>Cancelar</Button>
+                      <Button onClick={handleApoNombreUpdate} disabled={apoNombreSaving} className="gap-2">
+                        {apoNombreSaving && <Loader2 className="h-4 w-4 animate-spin" />}
+                        {apoNombreSaving ? 'Guardando...' : 'Guardar'}
                       </Button>
                     </div>
                   </div>
