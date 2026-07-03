@@ -79,6 +79,7 @@ export default function DashboardPage() {
   const [diaOpen, setDiaOpen] = useState(false);
   const [cerrandoAsistencia, setCerrandoAsistencia] = useState(false);
   const [confirmCerrarOpen, setConfirmCerrarOpen] = useState(false);
+  const [fechaRegistro, setFechaRegistro] = useState<string | null>(null);
 
   const noLaborablesRef = useRef<Set<string>>(new Set());
 
@@ -132,6 +133,15 @@ export default function DashboardPage() {
       }
 
       if (!esBrigadier && user?.id) {
+        const { data: alumno } = await supabase
+          .from('alumnos')
+          .select('created_at')
+          .eq('id', user.id)
+          .single();
+        if (alumno?.created_at) {
+          setFechaRegistro(new Date(alumno.created_at).toISOString().split('T')[0]);
+        }
+
         const { data: stats } = await supabase
           .from('asistencias')
           .select('estado')
@@ -471,7 +481,8 @@ export default function DashboardPage() {
                 const esFuturo = fecha > peruNow.toISOString().split('T')[0];
                 const hoy = fecha === peruNow.toISOString().split('T')[0];
                 const esPasadoLaborable = !esFuturo && !noLaborable;
-                const estado = rawEstado || (esPasadoLaborable ? 'falta_injustificada' : undefined);
+                const antesDeRegistro = fechaRegistro && fecha < fechaRegistro;
+                const estado = rawEstado || (esPasadoLaborable && !antesDeRegistro ? 'falta_injustificada' : undefined);
                 const clickable = !!estado;
                 return (
                   <div

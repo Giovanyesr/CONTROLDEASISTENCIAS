@@ -40,6 +40,7 @@ export default function HistorialPage() {
   const [diaOpen, setDiaOpen] = useState(false);
   const [justificationInfo, setJustificationInfo] = useState<{ motivo: string; evidencias: { nombre: string; url: string }[]; brigadier_nombre?: string } | null>(null);
   const [loadingJustInfo, setLoadingJustInfo] = useState(false);
+  const [fechaRegistro, setFechaRegistro] = useState<string | null>(null);
 
   const noLaborablesRef = useRef<Set<string>>(new Set());
 
@@ -52,7 +53,23 @@ export default function HistorialPage() {
       } catch { /* table may not exist */ }
     };
     fetchDias();
-  }, []);
+
+    const fetchFechaRegistro = async () => {
+      if (user?.rol === 'brigadier' || !user?.id) return;
+      try {
+        const sup = createClient();
+        const { data: alumno } = await sup
+          .from('alumnos')
+          .select('created_at')
+          .eq('id', user.id)
+          .single();
+        if (alumno?.created_at) {
+          setFechaRegistro(new Date(alumno.created_at).toISOString().split('T')[0]);
+        }
+      } catch { /* ignore */ }
+    };
+    fetchFechaRegistro();
+  }, [user]);
 
   const esLaborable = (fecha: string) => {
     const d = new Date(fecha + 'T12:00:00');
@@ -224,6 +241,7 @@ export default function HistorialPage() {
       const fecha = `${ano}-${String(mes + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
       if (!esLaborable(fecha)) continue;
       if (fecha > hoyStr) continue;
+      if (fechaRegistro && fecha < fechaRegistro) continue;
       rows.push({
         DNI: user?.dni || '',
         Estudiante: `${user?.nombres || ''} ${user?.apellidos || ''}`,
@@ -236,7 +254,7 @@ export default function HistorialPage() {
       });
     }
     return rows;
-  }, [esBrigadier, registros, mesAsistencias, filtroMes, filtroAno, user]);
+  }, [esBrigadier, registros, mesAsistencias, filtroMes, filtroAno, user, fechaRegistro]);
 
   const exportToPDF = useCallback(() => {
     const rows = buildExportRows();
@@ -373,7 +391,8 @@ export default function HistorialPage() {
                   const esFuturo = fecha > peruNow.toISOString().split('T')[0];
                   const hoy = fecha === peruNow.toISOString().split('T')[0];
                   const esPasadoLaborable = !esFuturo && !noLaborable;
-                  const estado = registro?.estado || (esPasadoLaborable ? 'falta_injustificada' : undefined);
+                  const antesDeRegistro = fechaRegistro && fecha < fechaRegistro;
+                  const estado = registro?.estado || (esPasadoLaborable && !antesDeRegistro ? 'falta_injustificada' : undefined);
                   const clickable = !!estado;
                   return (
                     <div
