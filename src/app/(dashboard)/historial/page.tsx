@@ -67,7 +67,7 @@ export default function HistorialPage() {
   const now = new Date();
   const peruOffset = -5 * 60;
   const localOffset = now.getTimezoneOffset();
-  const peruNow = new Date(now.getTime() + (localOffset - peruOffset) * 60000);
+  const peruNow = new Date(now.getTime() + (localOffset + peruOffset) * 60000);
   const añoActual = peruNow.getFullYear();
   const mesActual = peruNow.getMonth();
   const diasEnMes = new Date(parseInt(filtroAno), parseInt(filtroMes) + 1, 0).getDate();

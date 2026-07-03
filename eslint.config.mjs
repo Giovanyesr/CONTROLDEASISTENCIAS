@@ -13,6 +13,14 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  {
+    rules: {
+      // Allow `any` for Supabase query results
+      "@typescript-eslint/no-explicit-any": "warn",
+      // React 19 rule too strict for data-fetching patterns
+      "react-hooks/set-state-in-effect": "warn",
+    },
+  },
 ]);
 
 export default eslintConfig;

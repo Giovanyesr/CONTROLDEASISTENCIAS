@@ -55,7 +55,7 @@ const estadoBadge: Record<string, string> = {
 const now = new Date();
 const peruOffset = -5 * 60;
 const localOffset = now.getTimezoneOffset();
-const peruNow = new Date(now.getTime() + (localOffset - peruOffset) * 60000);
+const peruNow = new Date(now.getTime() + (localOffset + peruOffset) * 60000);
 
 export default function GradoPage() {
   const params = useParams();
