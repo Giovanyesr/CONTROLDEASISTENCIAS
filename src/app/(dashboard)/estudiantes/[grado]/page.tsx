@@ -83,7 +83,7 @@ export default function GradoPage() {
   const [justifyMotivo, setJustifyMotivo] = useState('');
   const [justifyEvidencia, setJustifyEvidencia] = useState<File | null>(null);
   const [justifySubiendo, setJustifySubiendo] = useState(false);
-  const [justificationInfo, setJustificationInfo] = useState<{ motivo: string; evidencias: { nombre: string; url: string }[] } | null>(null);
+  const [justificationInfo, setJustificationInfo] = useState<{ motivo: string; evidencias: { nombre: string; url: string }[]; brigadier_nombre?: string } | null>(null);
   const [loadingJustInfo, setLoadingJustInfo] = useState(false);
 
   const [open, setOpen] = useState(false);
@@ -335,7 +335,7 @@ export default function GradoPage() {
       if (!asis) { setLoadingJustInfo(false); return; }
       const { data: justs } = await sup
         .from('justificaciones')
-        .select('id, motivo')
+        .select('id, motivo, brigadier_id, perfiles!justificaciones_brigadier_id_fkey(nombres, apellidos)')
         .eq('asistencia_id', asis.id)
         .order('created_at', { ascending: false })
         .limit(1);
@@ -344,7 +344,12 @@ export default function GradoPage() {
         .from('evidencias')
         .select('nombre_archivo, url')
         .eq('justificacion_id', justs[0].id);
-      setJustificationInfo({ motivo: justs[0].motivo, evidencias: (evids || []).map(e => ({ nombre: e.nombre_archivo, url: e.url })) });
+      const j = justs[0] as any;
+      setJustificationInfo({
+        motivo: j.motivo,
+        evidencias: (evids || []).map(e => ({ nombre: e.nombre_archivo, url: e.url })),
+        brigadier_nombre: j.perfiles ? `${j.perfiles.nombres} ${j.perfiles.apellidos}` : undefined,
+      });
       setLoadingJustInfo(false);
     };
     fetchJustInfo();
@@ -815,6 +820,15 @@ export default function GradoPage() {
                       </div>
                     ) : justificationInfo ? (
                       <>
+                        {justificationInfo.brigadier_nombre && (
+                          <div className="flex items-center gap-2 rounded-xl border bg-muted/30 p-2.5">
+                            <ShieldCheck className="h-4 w-4 text-primary shrink-0" />
+                            <p className="text-sm text-foreground">
+                              <span className="text-muted-foreground">Justificado por: </span>
+                              <span className="font-medium">{justificationInfo.brigadier_nombre}</span>
+                            </p>
+                          </div>
+                        )}
                         <div className="rounded-xl border bg-card p-3">
                           <p className="text-xs text-muted-foreground mb-1">Motivo</p>
                           <p className="text-sm text-foreground">{justificationInfo.motivo}</p>
