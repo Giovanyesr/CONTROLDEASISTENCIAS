@@ -13,8 +13,9 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from '@/components/ui/dialog';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Download, QrCode, User, Phone, Fingerprint, Lock, Loader2, Camera, Pencil, GraduationCap, Contact } from 'lucide-react';
+import { Download, QrCode, User, Phone, Fingerprint, Lock, Loader2, Camera, Pencil, GraduationCap, Contact, Smartphone } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { PwaInstallButton } from '@/components/PwaInstallButton';
 
 export default function PerfilPage() {
   const { user, refreshProfile } = useAuth();
@@ -543,6 +544,8 @@ export default function PerfilPage() {
             </p>
           </CardContent>
         </Card>
+
+        <PwaInstallButton />
       </div>
     </div>
   );
