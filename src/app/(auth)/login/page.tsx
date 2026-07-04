@@ -65,15 +65,14 @@ export default function LoginPage() {
 
         {/* Content */}
         <div className="relative z-10 flex flex-col justify-between p-12 w-full min-h-screen">
-          <div className="flex items-center gap-3">
-            <Image
-              src="/logo.png"
-              alt="I.E. 30916 San Francisco de Asís"
-              width={200}
-              height={50}
-              className="h-auto w-48 brightness-0 invert opacity-90"
-              priority
-            />
+          <div className="flex flex-col">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 60" className="h-12 w-auto">
+              <rect x="6" y="8" width="36" height="44" rx="10" fill="#D4A853"/>
+              <text x="24" y="37" fontFamily="Georgia, 'Times New Roman', serif" fontSize="16" fontWeight="800" fill="#5c4510" textAnchor="middle">30916</text>
+              <text x="54" y="26" fontFamily="Georgia, 'Times New Roman', serif" fontSize="12" fontWeight="700" fill="#ffffff" letterSpacing="-0.3">San Francisco</text>
+              <text x="54" y="40" fontFamily="Georgia, 'Times New Roman', serif" fontSize="12" fontWeight="700" fill="#ffffff" letterSpacing="-0.3">de Asís</text>
+              <text x="54" y="52" fontFamily="Inter, system-ui, sans-serif" fontSize="6.5" fontWeight="600" fill="#D4A853" letterSpacing="1.5">CONTROL DE ASISTENCIA</text>
+            </svg>
           </div>
 
           <div className="space-y-8">
