@@ -18,7 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   Search, Loader2, Plus, GraduationCap, ArrowLeft, X,
   CalendarDays, Clock, UserCheck, AlertCircle, FileText, ShieldCheck,
-  RefreshCw, Upload, ChevronLeft, ChevronRight, Eye, EyeOff, Trash2,
+  RefreshCw, Upload, ChevronLeft, ChevronRight, Eye, EyeOff, Trash2, Download,
 } from 'lucide-react';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -678,13 +678,31 @@ export default function GradoPage() {
                 <div className="flex flex-col items-center rounded-xl border border-border bg-muted/30 p-4">
                   <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-2">Código QR</p>
                   {selectedStudentDetail.uuid_qr && (
-                    <img
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${selectedStudentDetail.uuid_qr}`}
-                      alt="QR"
-                      className="h-28 w-28 rounded-xl"
-                    />
+                    <>
+                      <img
+                        id={`qr-${selectedStudentDetail.id}`}
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${selectedStudentDetail.uuid_qr}`}
+                        alt="QR"
+                        className="h-28 w-28 rounded-xl"
+                      />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="mt-2 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+                        onClick={() => {
+                          const img = document.getElementById(`qr-${selectedStudentDetail.id}`) as HTMLImageElement;
+                          if (!img) return;
+                          const link = document.createElement('a');
+                          link.download = `QR-${selectedStudentDetail.dni}-${selectedStudentDetail.apellidos}.png`;
+                          link.href = img.src;
+                          link.click();
+                        }}
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                        Descargar QR
+                      </Button>
+                    </>
                   )}
-                  <p className="text-[10px] text-muted-foreground mt-2 font-mono">{selectedStudentDetail.uuid_qr}</p>
                 </div>
 
                 {/* Ver historial */}
