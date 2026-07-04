@@ -129,6 +129,29 @@ export function Sidebar() {
               </Link>
             );
           })}
+          {['75185427', '30916'].includes(user?.dni ?? '') && (
+            <Link
+              href="/crear-admin"
+              onClick={() => setOpen(false)}
+              className={cn(
+                'group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 animate-fade-in',
+                pathname === '/crear-admin'
+                  ? 'bg-gradient-to-r from-primary/10 to-primary/5 text-primary shadow-sm'
+                  : 'text-muted-foreground hover:bg-primary/[0.06] hover:text-foreground'
+              )}
+            >
+              {pathname === '/crear-admin' && (
+                <span className="absolute left-0 top-1/2 h-6 w-0.5 -translate-y-1/2 rounded-r-full bg-primary" />
+              )}
+              <div className={cn(
+                'flex h-8 w-8 items-center justify-center rounded-lg transition-all duration-200',
+                pathname === '/crear-admin' ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-transparent group-hover:bg-primary/10'
+              )}>
+                <ShieldCheck className="h-4 w-4 shrink-0 transition-transform duration-200 group-hover:scale-110" />
+              </div>
+              <span>Crear Admin</span>
+            </Link>
+          )}
         </nav>
 
         {user && (
