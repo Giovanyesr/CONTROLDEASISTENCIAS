@@ -65,7 +65,7 @@ export default function LoginPage() {
 
         {/* Content */}
         <div className="relative z-10 flex flex-col justify-between p-12 w-full min-h-screen">
-          <div className="flex flex-col items-start">
+          <div className="flex flex-col items-center w-full">
             <div className="rounded-xl bg-white/95 backdrop-blur-sm px-4 py-3 shadow-lg shadow-black/10">
               <Image
                 src="/logo.png"
