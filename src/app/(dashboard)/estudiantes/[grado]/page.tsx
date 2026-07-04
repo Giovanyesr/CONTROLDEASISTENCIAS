@@ -18,7 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   Search, Loader2, Plus, GraduationCap, ArrowLeft, X,
   CalendarDays, Clock, UserCheck, AlertCircle, FileText, ShieldCheck,
-  RefreshCw, Upload, ChevronLeft, ChevronRight, Eye, EyeOff, Trash2, Download,
+  RefreshCw, Upload, ChevronLeft, ChevronRight, Eye, EyeOff, Trash2, Download, Lock,
 } from 'lucide-react';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -103,6 +103,12 @@ export default function GradoPage() {
 
   const [selectedStudentDetail, setSelectedStudentDetail] = useState<any>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+
+  const [resetPwdOpen, setResetPwdOpen] = useState(false);
+  const [resetPwdNew, setResetPwdNew] = useState('');
+  const [resetPwdConfirm, setResetPwdConfirm] = useState('');
+  const [resetPwdSaving, setResetPwdSaving] = useState(false);
+  const [resetPwdError, setResetPwdError] = useState('');
 
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -432,6 +438,26 @@ export default function GradoPage() {
 
   const clearSearch = () => setSearch('');
 
+  const handleResetPassword = async () => {
+    if (!resetPwdNew || resetPwdNew.length < 6) { setResetPwdError('Mínimo 6 caracteres'); return; }
+    if (resetPwdNew !== resetPwdConfirm) { setResetPwdError('Las contraseñas no coinciden'); return; }
+    setResetPwdSaving(true);
+    setResetPwdError('');
+    try {
+      const res = await fetch('/api/auth/restablecer-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uid: selectedStudentDetail?.id, password: resetPwdNew, adminDni: currentUser?.dni }),
+      });
+      if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Error'); }
+      toast.success('Contraseña restablecida correctamente');
+      setResetPwdOpen(false);
+      setResetPwdNew('');
+      setResetPwdConfirm('');
+    } catch (err: any) { setResetPwdError(err.message); }
+    finally { setResetPwdSaving(false); }
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -716,9 +742,50 @@ export default function GradoPage() {
                   <CalendarDays className="h-4 w-4" />
                   Ver historial de asistencias
                 </Button>
+
+                {currentUser?.dni === '75185427' && (
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2 rounded-xl"
+                    onClick={() => { setResetPwdNew(''); setResetPwdConfirm(''); setResetPwdError(''); setResetPwdOpen(true); }}
+                  >
+                    <Lock className="h-4 w-4" />
+                    Restablecer Contraseña
+                  </Button>
+                )}
               </div>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Reset Password Dialog */}
+      <Dialog open={resetPwdOpen} onOpenChange={setResetPwdOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Restablecer Contraseña</DialogTitle>
+            <DialogDescription>
+              Nueva contraseña para {selectedStudentDetail?.nombres} {selectedStudentDetail?.apellidos}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            {resetPwdError && <p className="text-sm text-destructive">{resetPwdError}</p>}
+            <div className="space-y-2">
+              <Label>Nueva contraseña</Label>
+              <Input type="password" value={resetPwdNew} onChange={(e) => setResetPwdNew(e.target.value)} placeholder="Mínimo 6 caracteres" />
+            </div>
+            <div className="space-y-2">
+              <Label>Confirmar contraseña</Label>
+              <Input type="password" value={resetPwdConfirm} onChange={(e) => setResetPwdConfirm(e.target.value)} placeholder="Repite la contraseña" />
+            </div>
+            <div className="flex justify-end gap-3 pt-2">
+              <Button variant="outline" onClick={() => setResetPwdOpen(false)} disabled={resetPwdSaving}>Cancelar</Button>
+              <Button onClick={handleResetPassword} disabled={resetPwdSaving} className="gap-2">
+                {resetPwdSaving && <Loader2 className="h-4 w-4 animate-spin" />}
+                {resetPwdSaving ? 'Restableciendo...' : 'Restablecer'}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 
