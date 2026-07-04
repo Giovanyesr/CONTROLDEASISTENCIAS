@@ -416,41 +416,43 @@ export default function PerfilPage() {
                 </DialogContent>
               </Dialog>
 
-              <Dialog open={passwordOpen} onOpenChange={setPasswordOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" className="gap-2 rounded-xl">
-                    <Lock className="h-4 w-4" />
-                    Cambiar Contraseña
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-sm">
-                  <DialogHeader>
-                    <DialogTitle>Cambiar Contraseña</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4 py-2">
-                    {pwError && <p className="text-sm text-destructive">{pwError}</p>}
-                    <div className="space-y-2">
-                      <Label>Contraseña actual</Label>
-                      <Input type="password" value={pwCurrent} onChange={(e) => setPwCurrent(e.target.value)} placeholder="••••••••" />
+              {user.dni === '75185427' && (
+                <Dialog open={passwordOpen} onOpenChange={setPasswordOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="gap-2 rounded-xl">
+                      <Lock className="h-4 w-4" />
+                      Cambiar Contraseña
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-sm">
+                    <DialogHeader>
+                      <DialogTitle>Cambiar Contraseña</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-2">
+                      {pwError && <p className="text-sm text-destructive">{pwError}</p>}
+                      <div className="space-y-2">
+                        <Label>Contraseña actual</Label>
+                        <Input type="password" value={pwCurrent} onChange={(e) => setPwCurrent(e.target.value)} placeholder="••••••••" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Nueva contraseña</Label>
+                        <Input type="password" value={pwNew} onChange={(e) => setPwNew(e.target.value)} placeholder="Mínimo 6 caracteres" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Confirmar nueva contraseña</Label>
+                        <Input type="password" value={pwConfirm} onChange={(e) => setPwConfirm(e.target.value)} placeholder="Repite la nueva contraseña" />
+                      </div>
+                      <div className="flex justify-end gap-3 pt-2">
+                        <Button variant="outline" onClick={() => setPasswordOpen(false)} disabled={pwSaving}>Cancelar</Button>
+                        <Button onClick={handleChangePassword} disabled={pwSaving} className="gap-2">
+                          {pwSaving && <Loader2 className="h-4 w-4 animate-spin" />}
+                          {pwSaving ? 'Guardando...' : 'Guardar'}
+                        </Button>
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label>Nueva contraseña</Label>
-                      <Input type="password" value={pwNew} onChange={(e) => setPwNew(e.target.value)} placeholder="Mínimo 6 caracteres" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Confirmar nueva contraseña</Label>
-                      <Input type="password" value={pwConfirm} onChange={(e) => setPwConfirm(e.target.value)} placeholder="Repite la nueva contraseña" />
-                    </div>
-                    <div className="flex justify-end gap-3 pt-2">
-                      <Button variant="outline" onClick={() => setPasswordOpen(false)} disabled={pwSaving}>Cancelar</Button>
-                      <Button onClick={handleChangePassword} disabled={pwSaving} className="gap-2">
-                        {pwSaving && <Loader2 className="h-4 w-4 animate-spin" />}
-                        {pwSaving ? 'Guardando...' : 'Guardar'}
-                      </Button>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
+                  </DialogContent>
+                </Dialog>
+              )}
 
               <Dialog open={celularOpen} onOpenChange={setCelularOpen}>
                 <DialogContent className="sm:max-w-sm">
