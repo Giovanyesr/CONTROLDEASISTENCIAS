@@ -4,7 +4,7 @@ export async function POST(request: Request) {
   try {
     const { uid, password, adminDni } = await request.json();
 
-    if (adminDni !== '75185427') {
+    if (!['75185427', '30916'].includes(adminDni)) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
 

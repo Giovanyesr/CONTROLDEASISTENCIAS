@@ -743,7 +743,7 @@ export default function GradoPage() {
                   Ver historial de asistencias
                 </Button>
 
-                {currentUser?.dni === '75185427' && (
+                {['75185427', '30916'].includes(currentUser?.dni ?? '') && (
                   <Button
                     variant="outline"
                     className="w-full gap-2 rounded-xl"

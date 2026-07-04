@@ -416,7 +416,7 @@ export default function PerfilPage() {
                 </DialogContent>
               </Dialog>
 
-              {user.dni === '75185427' && (
+              {['75185427', '30916'].includes(user.dni) && (
                 <Dialog open={passwordOpen} onOpenChange={setPasswordOpen}>
                   <DialogTrigger asChild>
                     <Button variant="outline" className="gap-2 rounded-xl">
