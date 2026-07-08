@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/select';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, ShieldCheck, GraduationCap, UserCircle, Eye, EyeOff, Loader2, Plus, BookOpen, Trash2 } from 'lucide-react';
+import { Users, ShieldCheck, GraduationCap, UserCircle, Eye, EyeOff, Loader2, Plus, BookOpen, Trash2, Pencil } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const gradosDisponibles = ['1°', '2°', '3°', '4°', '5°'];
@@ -54,6 +54,11 @@ export default function RolesPage() {
   const [assignTutorId, setAssignTutorId] = useState<string | null>(null);
   const [assignGrado, setAssignGrado] = useState('');
   const [assignSeccion, setAssignSeccion] = useState('');
+
+  // Edit user
+  const [editOpen, setEditOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<any>(null);
+  const [editForm, setEditForm] = useState<any>({ nombres: '', apellidos: '', celular: '', genero: '', estado: '', grado: '', seccion: '' });
 
   useEffect(() => {
     if (authLoading) return;
@@ -207,6 +212,9 @@ export default function RolesPage() {
                             <BookOpen className="h-3 w-3" /> Asignar
                           </Button>
                         )}
+                        <Button variant="ghost" size="sm" className="rounded-lg" onClick={() => { setEditTarget(u); setEditForm({ nombres: u.nombres, apellidos: u.apellidos, celular: u.celular || '', genero: u.genero || '', estado: u.estado || 'activo', grado: u.alumno?.grado || '', seccion: u.alumno?.seccion || '' }); setEditOpen(true); }}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
                         <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg" onClick={() => handleDeleteUser(u.id)}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -294,6 +302,94 @@ export default function RolesPage() {
             <Button onClick={handleCreate} disabled={submitting} className="gap-2">
               {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
               {submitting ? 'Creando...' : 'Crear'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit User Dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar {editTarget?.apellidos} {editTarget?.nombres}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2 max-h-[70vh] overflow-y-auto pr-1">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Nombres</Label>
+                <Input value={editForm.nombres} onChange={(e) => setEditForm({ ...editForm, nombres: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>Apellidos</Label>
+                <Input value={editForm.apellidos} onChange={(e) => setEditForm({ ...editForm, apellidos: e.target.value })} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Celular</Label>
+                <Input value={editForm.celular} onChange={(e) => setEditForm({ ...editForm, celular: e.target.value.replace(/\D/g, '').slice(0, 9) })} maxLength={9} />
+              </div>
+              <div className="space-y-2">
+                <Label>Género</Label>
+                <select value={editForm.genero} onChange={(e) => setEditForm({ ...editForm, genero: e.target.value })}
+                  className="flex h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                  <option value="">Seleccionar...</option>
+                  <option value="masculino">Masculino</option>
+                  <option value="femenino">Femenino</option>
+                  <option value="otro">Otro</option>
+                </select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Estado</Label>
+              <select value={editForm.estado} onChange={(e) => setEditForm({ ...editForm, estado: e.target.value })}
+                className="flex h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                <option value="activo">Activo</option>
+                <option value="inactivo">Inactivo</option>
+              </select>
+            </div>
+            {activeTab !== 'director' && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Grado</Label>
+                  <Select value={editForm.grado} onValueChange={(v) => setEditForm({ ...editForm, grado: v })}>
+                    <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                    <SelectContent>
+                      {gradosDisponibles.map(g => <SelectItem key={g} value={g}>{g} Grado</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Sección</Label>
+                  <Select value={editForm.seccion} onValueChange={(v) => setEditForm({ ...editForm, seccion: v })}>
+                    <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                    <SelectContent>
+                      {seccionesDisponibles.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="flex justify-end gap-3 pt-2">
+            <Button variant="outline" onClick={() => setEditOpen(false)} disabled={submitting}>Cancelar</Button>
+            <Button onClick={async () => {
+              setSubmitting(true);
+              try {
+                const res = await fetch('/api/auth/actualizar-perfil', {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ id: editTarget.id, adminDni: user?.dni, ...editForm }),
+                });
+                if (!res.ok) { const err = await res.json(); throw new Error(err.error); }
+                toast.success('Perfil actualizado');
+                setEditOpen(false);
+                fetchUsers(activeTab);
+              } catch (err: any) { toast.error(err.message); }
+              finally { setSubmitting(false); }
+            }} disabled={submitting} className="gap-2">
+              {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+              {submitting ? 'Guardando...' : 'Guardar'}
             </Button>
           </div>
         </DialogContent>
