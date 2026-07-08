@@ -17,14 +17,15 @@ const breadcrumbMap: Record<string, string> = {
   perfil: 'Mi Perfil',
   brigadieres: 'Brigadieres',
   'dias-no-laborables': 'Días No Laborables',
+  roles: 'Roles',
 };
 
 const routeRoles: Record<string, string[]> = {
   escaner: ['brigadier'],
-  estudiantes: ['brigadier'],
-  justificaciones: ['brigadier'],
+  estudiantes: ['admin', 'director', 'tutor', 'brigadier'],
+  justificaciones: ['admin', 'director', 'tutor', 'brigadier'],
   brigadieres: ['brigadier'],
-  'dias-no-laborables': ['brigadier'],
+  'dias-no-laborables': ['admin'],
 };
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
