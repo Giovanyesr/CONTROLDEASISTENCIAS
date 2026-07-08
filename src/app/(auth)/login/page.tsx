@@ -12,7 +12,7 @@ import { Card } from '@/components/ui/card';
 import {
   AlertCircle, Eye, EyeOff, Loader2, GraduationCap,
   Users, CalendarClock, ShieldCheck, BarChart3, ArrowRight,
-  CheckCircle2, BookOpen,
+  IdCard, Lock
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -40,78 +40,89 @@ export default function LoginPage() {
   };
 
   const features = [
-    { icon: Users, label: 'Gestión de estudiantes' },
-    { icon: CalendarClock, label: 'Registro diario de asistencia' },
-    { icon: ShieldCheck, label: 'Control de brigadieres' },
-    { icon: BarChart3, label: 'Reportes e historial' },
+    { icon: Users, label: 'Gestión Estudiantil' },
+    { icon: CalendarClock, label: 'Control de Asistencia' },
+    { icon: ShieldCheck, label: 'Gestión de Brigadieres' },
+    { icon: BarChart3, label: 'Reportes e Historial' },
   ];
 
   return (
-    <div className="relative flex min-h-screen bg-[#f5f2ed]">
+    <div className="relative flex min-h-screen bg-[#FDFCFB] overflow-hidden selection:bg-[#D4A853]/30 selection:text-[#4a3b1a]">
       {/* ===== LEFT COLUMN — Branding Institucional ===== */}
-      <div className="hidden lg:flex lg:w-[45%] relative flex-col justify-between bg-gradient-to-br from-[#8B6914] via-[#6d5510] to-[#4d3c0b] p-14 overflow-hidden">
-        {/* Decorative background */}
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute -top-32 -right-32 h-[500px] w-[500px] rounded-full bg-[#D4A853]/12 blur-[130px]" />
-          <div className="absolute -bottom-32 -left-32 h-[400px] w-[400px] rounded-full bg-white/5 blur-[100px]" />
-          <div className="absolute top-1/4 left-1/2 h-px w-96 -translate-x-1/2 bg-gradient-to-r from-transparent via-[#D4A853]/15 to-transparent" />
-          <svg className="absolute bottom-0 left-0 w-full h-48 opacity-[0.04]" viewBox="0 0 800 200" preserveAspectRatio="none">
-            <path d="M0,120 C200,40 400,180 800,80 L800,200 L0,200 Z" fill="white" />
-          </svg>
-          <div className="absolute top-1/3 right-12 h-28 w-28 rounded-full border border-white/[0.06]" />
-          <div className="absolute bottom-1/3 left-12 h-20 w-20 rounded-2xl border border-white/[0.06] rotate-12" />
+      <div className="hidden lg:flex lg:w-[48%] relative flex-col justify-between bg-[#0f0c05] p-12 z-10 overflow-hidden">
+        
+        {/* Abstract Background Elements */}
+        <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-[#D4A853]/15 rounded-full blur-[120px] mix-blend-screen" />
+          <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-[#8B6914]/15 rounded-full blur-[130px] mix-blend-screen" />
+          {/* Subtle grid pattern */}
+          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4wNSkiLz48L3N2Zz4=')] [mask-image:linear-gradient(to_bottom,white,transparent_80%)]" />
         </div>
 
-        {/* Logo + Nombre */}
-        <div className="relative z-10">
-          <div className="flex flex-col items-center">
-            <div className="rounded-2xl bg-white/[0.96] backdrop-blur-sm px-8 py-4 shadow-2xl shadow-black/25 ring-1 ring-white/20">
+        {/* Wavy edge separator */}
+        <div className="absolute right-0 top-0 h-full w-[120px] translate-x-full pointer-events-none z-20">
+          <svg className="h-full w-full" preserveAspectRatio="none" viewBox="0 0 100 1000">
+            <path d="M 0 0 C 60 300 60 700 0 1000 Z" fill="#0f0c05" />
+            <path d="M 0 0 C 60 300 60 700 0 1000" fill="none" stroke="url(#goldGrad)" strokeWidth="2" opacity="0.5" />
+            <defs>
+              <linearGradient id="goldGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="#D4A853" stopOpacity="0" />
+                <stop offset="50%" stopColor="#D4A853" stopOpacity="1" />
+                <stop offset="100%" stopColor="#D4A853" stopOpacity="0" />
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+
+        {/* Header / Logo section */}
+        <div className="relative z-10 animate-in fade-in slide-in-from-top-8 duration-1000">
+          <div className="flex items-center gap-4">
+            <div className="relative h-20 w-20 drop-shadow-[0_0_15px_rgba(212,168,83,0.3)]">
               <Image
                 src="/logo.png"
-                alt="I.E. 30916 San Francisco de Asís"
-                width={220}
-                height={55}
-                className="h-auto w-48"
+                alt="Logo I.E."
+                fill
+                className="object-contain"
                 priority
               />
             </div>
-            <div className="mt-4 text-center">
-              <p className="text-sm font-semibold text-white/90 tracking-wide">
+            <div>
+              <h2 className="text-[15px] font-semibold text-white/90 tracking-wide uppercase">
                 I.E. 30916 San Francisco de Asís
-              </p>
-              <p className="text-xs text-[#D4A853]/70 tracking-wider mt-0.5">
-                Puente Capelo
-              </p>
+              </h2>
+              <p className="text-[13px] text-[#D4A853] tracking-widest mt-0.5 uppercase">Puente Capelo</p>
             </div>
           </div>
         </div>
 
-        {/* Middle content */}
-        <div className="relative z-10 space-y-8 -mt-8">
-          <div className="space-y-4">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.12] bg-white/[0.06] px-3.5 py-1 text-[11px] font-medium text-white/60 tracking-wider backdrop-blur-sm">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_#34d399]" />
-              Plataforma institucional
-            </span>
-            <h1 className="text-[2.5rem] font-bold tracking-tight text-white leading-[1.15]">
-              Control de
-              <br />
-              <span className="text-[#D4A853]">Asistencia</span>
-            </h1>
-            <p className="text-[15px] text-white/60 leading-relaxed max-w-sm">
-              Plataforma institucional para el registro, control y seguimiento de asistencia estudiantil.
-            </p>
+        {/* Main Content */}
+        <div className="relative z-10 w-full max-w-lg mx-auto flex flex-col justify-center flex-1 my-10 animate-in fade-in slide-in-from-left-8 duration-1000 delay-150 fill-mode-both">
+          
+          <div className="inline-flex items-center gap-2.5 rounded-full border border-white/5 bg-white/[0.03] px-4 py-2 backdrop-blur-xl w-fit mb-8 shadow-[0_0_20px_rgba(0,0,0,0.2)]">
+            <div className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)] animate-pulse" />
+            <span className="text-[12px] text-white/80 font-medium tracking-wide uppercase">Plataforma Institucional</span>
           </div>
+          
+          <h1 className="text-[3.5rem] font-bold leading-[1.05] tracking-tight mb-6">
+            <span className="text-white block">Sistema de</span>
+            <span className="bg-gradient-to-r from-[#D4A853] via-[#FFE5A3] to-[#D4A853] bg-clip-text text-transparent block pb-2">
+              Asistencia
+            </span>
+          </h1>
+          
+          <p className="text-[16px] text-white/60 leading-relaxed max-w-md font-light mb-12">
+            Gestión inteligente y control automatizado de asistencia estudiantil. Una solución integral para nuestra comunidad educativa.
+          </p>
 
-          <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-4">
             {features.map((f, i) => {
               const Icon = f.icon;
               return (
-                <div key={i} className="flex items-center gap-3.5 group">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.07] ring-1 ring-white/[0.08] group-hover:bg-white/[0.12] group-hover:ring-white/[0.15] transition-all duration-300">
-                    <Icon className="h-4 w-4 text-[#D4A853]" />
+                <div key={i} className="group flex items-center gap-4 rounded-2xl border border-white/5 bg-white/[0.02] p-4 backdrop-blur-sm transition-all duration-300 hover:bg-white/[0.06] hover:border-[#D4A853]/30 hover:shadow-[0_0_30px_rgba(212,168,83,0.1)] hover:-translate-y-1 cursor-default">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-black/20 text-[#D4A853] shadow-inner transition-transform duration-300 group-hover:scale-110 group-hover:bg-[#D4A853]/10">
+                    <Icon className="h-5 w-5" strokeWidth={1.5} />
                   </div>
-                  <span className="text-sm text-white/55 group-hover:text-white/75 transition-colors duration-300">{f.label}</span>
+                  <span className="text-[13px] font-medium text-white/80 group-hover:text-white transition-colors">{f.label}</span>
                 </div>
               );
             })}
@@ -119,165 +130,143 @@ export default function LoginPage() {
         </div>
 
         {/* Footer */}
-        <div className="relative z-10 flex items-center justify-between text-[11px] text-white/20">
-          <span>&copy; {new Date().getFullYear()} I.E. 30916 San Francisco de Asís</span>
+        <div className="relative z-10 flex items-center justify-between text-[12px] text-white/40 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300 fill-mode-both border-t border-white/10 pt-6">
+          <p>&copy; {new Date().getFullYear()} Todos los derechos reservados.</p>
           <div className="flex items-center gap-2">
-            <span className="h-1 w-1 rounded-full bg-white/20" />
-            <span>v2.0</span>
+            <ShieldCheck className="h-4 w-4 text-[#D4A853]/60" />
+            <span>Sistema Seguro v2.0</span>
           </div>
         </div>
       </div>
 
       {/* ===== RIGHT COLUMN — Formulario de Login ===== */}
-      <div className="relative flex w-full items-center justify-center p-5 lg:w-[55%]">
+      <div className="relative flex w-full flex-col items-center justify-center p-6 lg:w-[52%] z-10">
+        
         {/* Mobile branding header */}
-        <div className="absolute left-0 right-0 top-0 flex flex-col items-center pt-10 pb-6 lg:hidden">
-          <Image
-            src="/logo.png"
-            alt="I.E. 30916 San Francisco de Asís"
-            width={200}
-            height={50}
-            className="h-auto w-40 drop-shadow-sm"
-            priority
-          />
-          <p className="mt-2 text-[11px] font-semibold text-[#8B6914]/50 tracking-[0.15em] uppercase">
-            Control de Asistencia
-          </p>
+        <div className="absolute left-0 right-0 top-0 flex flex-col items-center pt-8 pb-4 lg:hidden bg-white/80 backdrop-blur-md z-20 border-b border-gray-100">
+          <Image src="/logo.png" alt="I.E. 30916 San Francisco de Asís" width={80} height={80} className="h-20 w-20 drop-shadow-sm" priority />
+          <p className="mt-2 text-[10px] font-semibold text-[#8B6914] tracking-[0.15em] uppercase">Control de Asistencia</p>
         </div>
 
-        <div className="w-full max-w-sm mt-24 lg:mt-0">
-          <Card className="overflow-hidden border border-[#E0D5C0]/50 bg-white shadow-[0_12px_50px_-12px_rgba(0,0,0,0.18)]">
-            <div className="relative">
-              {/* Gold top bar */}
-              <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-[#8B6914] via-[#D4A853] to-[#8B6914]" />
+        <div className="w-full max-w-[420px] mt-24 lg:mt-0 relative z-30 lg:-ml-8 animate-in fade-in zoom-in-95 duration-700">
+          {/* Main Form Card */}
+          <Card className="overflow-hidden border-0 bg-white/70 backdrop-blur-xl shadow-[0_20px_80px_-20px_rgba(0,0,0,0.08)] rounded-[2rem] ring-1 ring-gray-900/5">
+            <div className="p-8 sm:p-10">
+              
+              {/* Badge Top Card */}
+              <div className="mb-10 flex items-center justify-center lg:justify-start gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-[#D4A853]/20 to-[#8B6914]/5 text-[#8B6914] shadow-sm ring-1 ring-[#D4A853]/30">
+                  <Lock className="h-5 w-5" strokeWidth={2} />
+                </div>
+                <div>
+                  <h2 className="text-[18px] font-bold text-gray-900 leading-none">Bienvenido</h2>
+                  <p className="text-[12px] font-medium text-[#8B6914] uppercase tracking-wider mt-1.5">Acceso al Sistema</p>
+                </div>
+              </div>
 
-              <div className="p-8 sm:p-10">
-                {/* Badge */}
-                <div className="mb-6 flex items-center gap-2.5">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-[#8B6914]/10 to-[#D4A853]/10 ring-1 ring-[#8B6914]/10">
-                    <GraduationCap className="h-3.5 w-3.5 text-[#8B6914]" />
+              {/* Form */}
+              <form onSubmit={handleSubmit} className="space-y-5">
+                {error && (
+                  <div className="animate-in slide-in-from-top-2 flex items-center gap-3 rounded-2xl border border-red-100 bg-red-50/50 p-4 text-[13px] text-red-600 shadow-sm">
+                    <AlertCircle className="h-4 w-4 shrink-0 text-red-500" />
+                    <span className="font-medium">{error}</span>
                   </div>
-                  <span className="text-[10px] font-semibold text-[#8B6914]/45 tracking-[0.18em] uppercase">
-                    Acceso al Sistema
-                  </span>
-                </div>
+                )}
 
-                {/* Title */}
-                <div className="mb-8">
-                  <h1 className="text-[1.6rem] font-bold tracking-tight text-[#2C2C2C]">
-                    Iniciar sesión
-                  </h1>
-                  <p className="mt-1.5 text-sm text-[#6B5B4E]/60">
-                    Accede al sistema de asistencia con tu DNI y contraseña
-                  </p>
-                </div>
-
-                {/* Form */}
-                <form onSubmit={handleSubmit} className="space-y-5">
-                  {error && (
-                    <div className="animate-scale-in flex items-center gap-2.5 rounded-xl border border-red-200/80 bg-red-50/90 p-3.5 text-sm text-red-700 shadow-sm">
-                      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-red-100">
-                        <AlertCircle className="h-3.5 w-3.5" />
-                      </div>
-                      <span>{error}</span>
+                {/* DNI Input */}
+                <div className="space-y-2 group">
+                  <Label htmlFor="dni" className="text-[13px] font-semibold text-gray-600 ml-1 transition-colors group-focus-within:text-[#8B6914]">
+                    Documento de Identidad
+                  </Label>
+                  <div className="relative">
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 transition-colors group-focus-within:text-[#8B6914]">
+                      <IdCard className="h-5 w-5" strokeWidth={1.5} />
                     </div>
-                  )}
+                    <Input
+                      id="dni"
+                      placeholder="Ingresa tu DNI de 8 dígitos"
+                      value={dni}
+                      onChange={(e) => setDni(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                      maxLength={8}
+                      disabled={loading}
+                      autoComplete="username"
+                      className="h-[54px] w-full rounded-2xl border-0 bg-gray-50/80 pl-12 pr-4 text-[15px] shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] ring-1 ring-gray-200 transition-all focus:bg-white focus:ring-2 focus:ring-[#D4A853] hover:bg-gray-50 placeholder:text-gray-400"
+                    />
+                  </div>
+                </div>
 
-                  {/* DNI */}
-                  <div className="space-y-1.5">
-                    <Label htmlFor="dni" className="text-sm font-medium text-[#4a4a4a]/70">
-                      Número de DNI
+                {/* Password Input */}
+                <div className="space-y-2 group">
+                  <div className="flex items-center justify-between ml-1">
+                    <Label htmlFor="password" className="text-[13px] font-semibold text-gray-600 transition-colors group-focus-within:text-[#8B6914]">
+                      Contraseña
                     </Label>
-                    <div className="relative">
-                      <Input
-                        id="dni"
-                        placeholder="Ingrese su DNI"
-                        value={dni}
-                        onChange={(e) => setDni(e.target.value.replace(/\D/g, '').slice(0, 8))}
-                        maxLength={8}
-                        disabled={loading}
-                        autoComplete="username"
-                        className="h-12 w-full rounded-xl border bg-white pl-4 pr-12 text-[15px] shadow-sm transition-all duration-200 placeholder:text-[#6B5B4E]/25 focus:border-[#8B6914] focus:ring-[3px] focus:ring-[#8B6914]/10 focus:shadow-md focus:outline-none"
-                        style={{ borderColor: '#E0D5C0' }}
-                      />
-                      {dni.length === 8 && (
-                        <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                          <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                        </div>
-                      )}
-                    </div>
                   </div>
-
-                  {/* Password */}
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="password" className="text-sm font-medium text-[#4a4a4a]/70">
-                        Contraseña
-                      </Label>
+                  <div className="relative">
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 transition-colors group-focus-within:text-[#8B6914]">
+                      <Lock className="h-5 w-5" strokeWidth={1.5} />
                     </div>
-                    <div className="relative">
-                      <Input
-                        id="password"
-                        type={showPassword ? 'text' : 'password'}
-                        placeholder="Ingrese su contraseña"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        disabled={loading}
-                        autoComplete="current-password"
-                        className="h-12 w-full rounded-xl border bg-white pr-12 pl-4 text-[15px] shadow-sm transition-all duration-200 placeholder:text-[#6B5B4E]/25 focus:border-[#8B6914] focus:ring-[3px] focus:ring-[#8B6914]/10 focus:shadow-md focus:outline-none"
-                        style={{ borderColor: '#E0D5C0' }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-[#6B5B4E]/35 transition-all hover:text-[#8B6914] active:scale-90"
-                        tabIndex={-1}
-                        aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                      >
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </button>
-                    </div>
+                    <Input
+                      id="password"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="Ingresa tu contraseña"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      disabled={loading}
+                      autoComplete="current-password"
+                      className="h-[54px] w-full rounded-2xl border-0 bg-gray-50/80 pl-12 pr-12 text-[15px] shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] ring-1 ring-gray-200 transition-all focus:bg-white focus:ring-2 focus:ring-[#D4A853] hover:bg-gray-50 placeholder:text-gray-400"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 rounded-xl p-2 text-gray-400 transition-all hover:bg-gray-100 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-[#D4A853]"
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" strokeWidth={1.5} /> : <Eye className="h-4 w-4" strokeWidth={1.5} />}
+                    </button>
                   </div>
+                </div>
 
-                  {/* Submit */}
-                  <Button
-                    type="submit"
-                    className="relative h-12 w-full overflow-hidden rounded-xl bg-gradient-to-r from-[#8B6914] to-[#a8882c] text-white text-[15px] font-semibold shadow-lg shadow-[#8B6914]/20 transition-all duration-300 hover:shadow-xl hover:shadow-[#8B6914]/30 hover:from-[#7a5d12] hover:to-[#8B6914] active:scale-[0.98] disabled:opacity-70 group"
-                    disabled={loading}
+                {/* Recuperar enlace */}
+                <div className="flex justify-end pt-1">
+                  <Link
+                    href="/recuperar"
+                    className="text-[13px] font-medium text-gray-500 transition-colors hover:text-[#8B6914]"
                   >
-                    {loading ? (
-                      <span className="flex items-center justify-center gap-2.5">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        <span>Ingresando...</span>
-                      </span>
-                    ) : (
-                      <span className="flex items-center justify-center gap-2">
-                        <span>Ingresar al sistema</span>
-                        <ArrowRight className="h-4 w-4 transition-all duration-300 group-hover:translate-x-1" />
-                      </span>
-                    )}
-                  </Button>
-                </form>
-              </div>
+                    ¿Olvidaste tu contraseña?
+                  </Link>
+                </div>
 
-              {/* Footer link */}
-              <div className="flex items-center justify-center gap-1.5 border-t border-[#E0D5C0]/40 bg-[#FAF8F5]/50 px-8 py-4">
-                <span className="text-xs text-[#6B5B4E]/40">¿Problemas para ingresar?</span>
-                <Link
-                  href="/recuperar"
-                  className="text-xs font-medium text-[#8B6914] transition-all hover:text-[#7a5d12]"
+                {/* Submit Button */}
+                <Button
+                  type="submit"
+                  className="relative h-[54px] w-full rounded-2xl bg-[#111827] text-white text-[15px] font-semibold shadow-[0_8px_20px_rgba(17,24,39,0.15)] transition-all duration-300 hover:shadow-[0_12px_25px_rgba(17,24,39,0.25)] hover:-translate-y-0.5 mt-4 hover:bg-[#1f2937]"
+                  disabled={loading}
                 >
-                  Recuperar acceso
-                </Link>
-              </div>
+                  {loading ? (
+                    <span className="flex items-center justify-center gap-2 relative z-10">
+                      <Loader2 className="h-5 w-5 animate-spin text-[#D4A853]" />
+                      <span>Verificando credenciales...</span>
+                    </span>
+                  ) : (
+                    <span className="flex items-center justify-center gap-2 relative z-10">
+                      <span>Ingresar al sistema</span>
+                      <ArrowRight className="h-4 w-4 text-[#D4A853] transition-transform duration-300 group-hover:translate-x-1" strokeWidth={2.5} />
+                    </span>
+                  )}
+                </Button>
+              </form>
             </div>
           </Card>
-
-          <p className="mt-8 text-center text-xs text-[#6B5B4E]/25 lg:hidden">
-            I.E. 30916 San Francisco de Asís &mdash; Todos los derechos reservados
-          </p>
         </div>
       </div>
+
+      {/* Decorative background blur blobs right side */}
+      <div className="fixed right-0 top-0 -z-10 h-full w-1/2 overflow-hidden pointer-events-none opacity-40">
+        <div className="absolute -top-[10%] right-[-5%] h-[400px] w-[400px] rounded-full bg-[#D4A853]/20 blur-[100px]" />
+        <div className="absolute bottom-[-10%] right-[10%] h-[500px] w-[500px] rounded-full bg-[#8B6914]/15 blur-[120px]" />
+      </div>
+
     </div>
   );
 }
+

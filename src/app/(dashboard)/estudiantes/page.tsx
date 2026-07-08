@@ -9,11 +9,11 @@ import { Users, GraduationCap, ArrowRight, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
 const grados = [
-  { id: 1, label: '1° Grado', desc: 'Primer grado de primaria', color: 'from-blue-500/20 to-blue-600/10', iconBg: 'bg-blue-500' },
-  { id: 2, label: '2° Grado', desc: 'Segundo grado de primaria', color: 'from-green-500/20 to-green-600/10', iconBg: 'bg-green-500' },
-  { id: 3, label: '3° Grado', desc: 'Tercer grado de primaria', color: 'from-yellow-500/20 to-yellow-600/10', iconBg: 'bg-yellow-500' },
-  { id: 4, label: '4° Grado', desc: 'Cuarto grado de primaria', color: 'from-purple-500/20 to-purple-600/10', iconBg: 'bg-purple-500' },
-  { id: 5, label: '5° Grado', desc: 'Quinto grado de primaria', color: 'from-orange-500/20 to-orange-600/10', iconBg: 'bg-orange-500' },
+  { id: 1, label: '1° Grado', desc: '1° Grado de Secundaria', color: 'from-blue-500/20 to-blue-600/10', iconBg: 'bg-blue-500' },
+  { id: 2, label: '2° Grado', desc: '2° Grado de Secundaria', color: 'from-green-500/20 to-green-600/10', iconBg: 'bg-green-500' },
+  { id: 3, label: '3° Grado', desc: '3° Grado de Secundaria', color: 'from-yellow-500/20 to-yellow-600/10', iconBg: 'bg-yellow-500' },
+  { id: 4, label: '4° Grado', desc: '4° Grado de Secundaria', color: 'from-purple-500/20 to-purple-600/10', iconBg: 'bg-purple-500' },
+  { id: 5, label: '5° Grado', desc: '5° Grado de Secundaria', color: 'from-orange-500/20 to-orange-600/10', iconBg: 'bg-orange-500' },
 ];
 
 const normalizeGrado = (g: string) => {
