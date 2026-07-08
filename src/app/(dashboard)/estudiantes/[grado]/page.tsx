@@ -1224,7 +1224,7 @@ export default function GradoPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2"><Label>Grado</Label><Input value={gradoLabel} disabled className="bg-muted" /></div>
-              <div className="space-y-2"><Label>Sección</Label><Input placeholder="A" value={form.seccion} onChange={(e) => setForm({ ...form, seccion: e.target.value })} className="input-glow" /></div>
+              <div className="space-y-2"><Label>Sección</Label><Input placeholder="Único" value={form.seccion} onChange={(e) => setForm({ ...form, seccion: e.target.value })} className="input-glow" /></div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2"><Label>Apoderado (opcional)</Label><Input placeholder="Nombre del apoderado" value={form.apoderado_nombre} onChange={(e) => setForm({ ...form, apoderado_nombre: e.target.value })} className="input-glow" /></div>
