@@ -671,6 +671,10 @@ export default function GradoPage() {
                     <p className="text-sm font-medium text-foreground mt-1">{selectedStudentDetail.celular || '—'}</p>
                   </div>
                   <div className="rounded-xl border border-border bg-muted/30 p-3">
+                    <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Género</p>
+                    <p className="text-sm font-medium text-foreground mt-1 capitalize">{selectedStudentDetail.genero || '—'}</p>
+                  </div>
+                  <div className="rounded-xl border border-border bg-muted/30 p-3">
                     <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Estado</p>
                     <Badge variant={selectedStudentDetail.estado === 'activo' ? 'default' : 'secondary'} className="rounded-md text-xs mt-1">
                       {selectedStudentDetail.estado || 'activo'}
