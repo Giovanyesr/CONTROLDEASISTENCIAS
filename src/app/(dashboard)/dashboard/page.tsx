@@ -13,6 +13,7 @@ import {
   Users,
   CheckCircle2,
   Clock,
+  UserCheck,
   XCircle,
   FileWarning,
   Percent,
@@ -75,7 +76,7 @@ export default function DashboardPage() {
   const esBrigadier = user?.rol === 'brigadier';
 
   const [mesAsistencias, setMesAsistencias] = useState<Record<string, string>>({});
-  const [diaSeleccionado, setDiaSeleccionado] = useState<{ fecha: string; estado?: string } | null>(null);
+  const [diaSeleccionado, setDiaSeleccionado] = useState<{ fecha: string; estado?: string; hora?: string; brigadier_nombre?: string } | null>(null);
   const [diaOpen, setDiaOpen] = useState(false);
   const [cerrandoAsistencia, setCerrandoAsistencia] = useState(false);
   const [confirmCerrarOpen, setConfirmCerrarOpen] = useState(false);
@@ -487,10 +488,32 @@ export default function DashboardPage() {
                 return (
                   <div
                     key={dia}
-                    onClick={() => {
+                    onClick={async () => {
                       if (clickable && estado) {
                         setDiaSeleccionado({ fecha, estado });
                         setDiaOpen(true);
+                        if (rawEstado) {
+                          try {
+                            const { data } = await supabase
+                              .from('asistencias')
+                              .select('hora, brigadier_id')
+                              .eq('alumno_id', user?.id)
+                              .eq('fecha', fecha)
+                              .maybeSingle();
+                            if (data) {
+                              let bNombre: string | undefined;
+                              if (data.brigadier_id) {
+                                const { data: b } = await supabase
+                                  .from('perfiles')
+                                  .select('nombres, apellidos')
+                                  .eq('id', data.brigadier_id)
+                                  .maybeSingle();
+                                if (b) bNombre = `${b.nombres} ${b.apellidos}`;
+                              }
+                              setDiaSeleccionado(prev => prev ? { ...prev, hora: data.hora?.slice(0, 5), brigadier_nombre: bNombre } : prev);
+                            }
+                          } catch {}
+                        }
                       }
                     }}
                     className={`
@@ -537,7 +560,28 @@ export default function DashboardPage() {
                 </div>
                 <div>
                   <p className="text-lg font-semibold text-foreground">{getEstadoLabel(diaSeleccionado.estado)}</p>
-                  <p className="text-sm text-muted-foreground">Todo el día</p>
+                  {diaSeleccionado.hora ? (
+                    <div className="mt-3 space-y-2 text-left">
+                      <div className="flex items-center gap-2 rounded-xl border bg-muted/30 p-2.5">
+                        <Clock className="h-4 w-4 text-primary shrink-0" />
+                        <p className="text-sm text-foreground">
+                          <span className="text-muted-foreground">Registrado a las </span>
+                          <span className="font-medium">{diaSeleccionado.hora}</span>
+                        </p>
+                      </div>
+                      {diaSeleccionado.brigadier_nombre && (
+                        <div className="flex items-center gap-2 rounded-xl border bg-muted/30 p-2.5">
+                          <UserCheck className="h-4 w-4 text-primary shrink-0" />
+                          <p className="text-sm text-foreground">
+                            <span className="text-muted-foreground">Registrado por: </span>
+                            <span className="font-medium">{diaSeleccionado.brigadier_nombre}</span>
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground mt-1">Todo el día</p>
+                  )}
                 </div>
               </div>
             ) : (

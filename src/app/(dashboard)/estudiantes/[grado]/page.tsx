@@ -78,7 +78,7 @@ export default function GradoPage() {
   const [historialLoading, setHistorialLoading] = useState(false);
   const [statsHistorial, setStatsHistorial] = useState({ presentes: 0, tardanzas: 0, justificadas: 0, faltas: 0, total: 0 });
 
-  const [diaSeleccionado, setDiaSeleccionado] = useState<{ fecha: string; estado?: string; alumno_id?: string } | null>(null);
+  const [diaSeleccionado, setDiaSeleccionado] = useState<{ fecha: string; estado?: string; alumno_id?: string; hora?: string; brigadier_nombre?: string } | null>(null);
   const [diaOpen, setDiaOpen] = useState(false);
   const [justifyMotivo, setJustifyMotivo] = useState('');
   const [justifyEvidencia, setJustifyEvidencia] = useState<File | null>(null);
@@ -871,12 +871,34 @@ export default function GradoPage() {
                     return (
                       <div
                         key={dia}
-                        onClick={() => {
+                        onClick={async () => {
                           if (clickable && estado && selectedStudent) {
                             setDiaSeleccionado({ fecha, estado, alumno_id: selectedStudent.id });
                             setJustifyMotivo('');
                             setJustifyEvidencia(null);
                             setDiaOpen(true);
+                            if (rawEstado && (estado === 'presente' || estado === 'tardanza')) {
+                              try {
+                                const { data, error } = await supabase
+                                  .from('asistencias')
+                                  .select('hora, brigadier_id')
+                                  .eq('alumno_id', selectedStudent.id)
+                                  .eq('fecha', fecha)
+                                  .maybeSingle();
+                                if (data && !error) {
+                                  let bNombre: string | undefined;
+                                  if (data.brigadier_id) {
+                                    const { data: b } = await supabase
+                                      .from('perfiles')
+                                      .select('nombres, apellidos')
+                                      .eq('id', data.brigadier_id)
+                                      .maybeSingle();
+                                    if (b) bNombre = `${b.nombres} ${b.apellidos}`;
+                                  }
+                                  setDiaSeleccionado(prev => prev ? { ...prev, hora: data.hora?.slice(0, 5), brigadier_nombre: bNombre } : prev);
+                                }
+                              } catch {}
+                            }
                           }
                         }}
                         className={`relative flex aspect-square items-center justify-center rounded-lg text-xs font-medium transition-all duration-150
@@ -943,6 +965,29 @@ export default function GradoPage() {
                 <Badge variant={(estadoBadge[diaSeleccionado.estado || ''] || 'secondary') as any} className="rounded-md px-3 py-1 text-sm">
                   {diaSeleccionado.estado?.replace(/_/g, ' ')}
                 </Badge>
+
+                {(diaSeleccionado.hora || diaSeleccionado.brigadier_nombre) && (
+                  <div className="w-full space-y-2 pt-2 border-t border-border animate-fade-in-up">
+                    {diaSeleccionado.hora && (
+                      <div className="flex items-center gap-2 rounded-xl border bg-muted/30 p-2.5">
+                        <Clock className="h-4 w-4 text-primary shrink-0" />
+                        <p className="text-sm text-foreground">
+                          <span className="text-muted-foreground">Registrado a las </span>
+                          <span className="font-medium">{diaSeleccionado.hora}</span>
+                        </p>
+                      </div>
+                    )}
+                    {diaSeleccionado.brigadier_nombre && (
+                      <div className="flex items-center gap-2 rounded-xl border bg-muted/30 p-2.5">
+                        <ShieldCheck className="h-4 w-4 text-primary shrink-0" />
+                        <p className="text-sm text-foreground">
+                          <span className="text-muted-foreground">Registrado por: </span>
+                          <span className="font-medium">{diaSeleccionado.brigadier_nombre}</span>
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {diaSeleccionado.estado === 'falta_justificada' && (
                   <div className="w-full space-y-3 pt-2 border-t border-border animate-fade-in-up">
