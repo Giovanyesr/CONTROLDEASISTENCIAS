@@ -133,7 +133,7 @@ export default function DashboardPage() {
         setData(dashboard);
       }
 
-      if (!esBrigadier && user?.id) {
+      if (user?.rol === 'alumno' && user?.id) {
         const { data: alumno } = await supabase
           .from('alumnos')
           .select('created_at')
@@ -170,7 +170,7 @@ export default function DashboardPage() {
         .order('created_at', { ascending: false })
         .limit(10);
 
-      if (!esBrigadier && user?.id) {
+      if (user?.rol === 'alumno' && user?.id) {
         query.eq('alumno_id', user.id);
       }
 
