@@ -21,7 +21,7 @@ import { Users, ShieldCheck, GraduationCap, UserCircle, Eye, EyeOff, Loader2, Pl
 import toast from 'react-hot-toast';
 
 const gradosDisponibles = ['1°', '2°', '3°', '4°', '5°'];
-const seccionesDisponibles = ['A', 'B', 'C'];
+const seccionesDisponibles = ['A'];
 
 const roleConfig: Record<string, { label: string; color: string; icon: any }> = {
   admin: { label: 'Administradores', color: 'text-red-600 bg-red-50 border-red-200', icon: ShieldCheck },
