@@ -9,6 +9,7 @@ export interface Perfil {
   apellidos: string;
   celular: string | null;
   foto_url: string | null;
+  genero: string | null;
   rol: Rol;
   estado: EstadoPerfil;
   uuid_qr: string;

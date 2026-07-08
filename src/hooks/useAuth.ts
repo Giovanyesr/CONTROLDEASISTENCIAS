@@ -49,6 +49,7 @@ export function useAuth() {
         apellidos: (meta.apellidos as string) ?? '',
         celular: null,
         foto_url: null,
+        genero: null,
         rol: ((meta.rol ?? meta.role) as Rol | undefined) ?? 'alumno',
         estado: 'activo',
         uuid_qr: '',

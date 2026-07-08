@@ -145,7 +145,7 @@ export default function DashboardPage() {
 
         const { data: stats } = await supabase
           .from('asistencias')
-          .select('estado')
+          .select('fecha, estado')
           .eq('alumno_id', user.id);
         setMisStats(stats || []);
 
@@ -192,10 +192,28 @@ export default function DashboardPage() {
     return () => { supabase.removeChannel(canal); };
   }, [user]);
 
-  const presentes = (misStats ?? []).filter((s: any) => s.estado === 'presente').length;
-  const tardanzas = (misStats ?? []).filter((s: any) => s.estado === 'tardanza').length;
-  const faltasJustificadas = (misStats ?? []).filter((s: any) => s.estado === 'falta_justificada').length;
-  const faltasInjustificadas = (misStats ?? []).filter((s: any) => s.estado === 'falta_injustificada').length;
+  const statsMap = Object.fromEntries((misStats ?? []).map((s: any) => [s.fecha, s.estado]));
+  const hoyStr = getPeruDate();
+  let presentes = 0, tardanzas = 0, faltasJustificadas = 0, faltasInjustificadas = 0;
+  if (!esBrigadier && fechaRegistro) {
+    const inicio = new Date(fechaRegistro);
+    const fin = new Date(hoyStr);
+    for (let d = new Date(inicio); d <= fin; d.setDate(d.getDate() + 1)) {
+      const f = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      if (!esLaborable(f)) continue;
+      const estado = statsMap[f];
+      if (estado === 'presente') presentes++;
+      else if (estado === 'tardanza') tardanzas++;
+      else if (estado === 'falta_justificada') faltasJustificadas++;
+      else if (estado === 'falta_injustificada') faltasInjustificadas++;
+      else if (f < hoyStr) faltasInjustificadas++;
+    }
+  } else {
+    presentes = (misStats ?? []).filter((s: any) => s.estado === 'presente').length;
+    tardanzas = (misStats ?? []).filter((s: any) => s.estado === 'tardanza').length;
+    faltasJustificadas = (misStats ?? []).filter((s: any) => s.estado === 'falta_justificada').length;
+    faltasInjustificadas = (misStats ?? []).filter((s: any) => s.estado === 'falta_injustificada').length;
+  }
   const totalAsistencia = (data?.presentes_hoy ?? 0) + (data?.tardanzas_hoy ?? 0);
   const totalEstudiantes = data?.total_estudiantes ?? 1;
   const porcentajeGeneral = Math.round((totalAsistencia / totalEstudiantes) * 100);

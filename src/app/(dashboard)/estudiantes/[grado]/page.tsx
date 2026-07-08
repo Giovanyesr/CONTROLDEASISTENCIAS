@@ -91,7 +91,7 @@ export default function GradoPage() {
   const [tipoRegistro, setTipoRegistro] = useState<'estudiante' | 'brigadier'>('estudiante');
   const [showPwd, setShowPwd] = useState(false);
   const [form, setForm] = useState<any>({
-    dni: '', nombres: '', apellidos: '', celular: '',
+    dni: '', nombres: '', apellidos: '', celular: '', genero: '',
     grado: '', seccion: '', apoderado_nombre: '', apoderado_celular: '',
     password: '',
   });
@@ -1165,6 +1165,20 @@ export default function GradoPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2"><Label>Nombres</Label><Input placeholder="Carlos" value={form.nombres} onChange={(e) => setForm({ ...form, nombres: e.target.value })} className="input-glow" /></div>
               <div className="space-y-2"><Label>Apellidos</Label><Input placeholder="Rodríguez" value={form.apellidos} onChange={(e) => setForm({ ...form, apellidos: e.target.value })} className="input-glow" /></div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Género (opcional)</Label>
+              <select
+                value={form.genero}
+                onChange={(e) => setForm({ ...form, genero: e.target.value })}
+                className="flex h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                <option value="">Seleccionar...</option>
+                <option value="masculino">Masculino</option>
+                <option value="femenino">Femenino</option>
+                <option value="otro">Otro</option>
+              </select>
             </div>
 
             <div className="grid grid-cols-2 gap-4">

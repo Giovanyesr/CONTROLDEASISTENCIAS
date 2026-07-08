@@ -5,7 +5,7 @@ import { randomUUID } from 'crypto';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { dni, nombres, apellidos, celular, grado, seccion, apoderado_nombre, apoderado_celular, password } = body;
+    const { dni, nombres, apellidos, celular, genero, grado, seccion, apoderado_nombre, apoderado_celular, password } = body;
 
     if (!dni || dni.length !== 8 || !nombres || !apellidos || !grado || !seccion) {
       return NextResponse.json({ error: 'Campos obligatorios faltantes' }, { status: 400 });
@@ -50,6 +50,7 @@ export async function POST(request: Request) {
       nombres,
       apellidos,
       celular: celular || null,
+      genero: genero || null,
       rol: 'brigadier',
       estado: 'activo',
       uuid_qr: randomUUID(),

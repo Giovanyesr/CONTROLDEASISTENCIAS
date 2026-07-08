@@ -31,6 +31,9 @@ export default function PerfilPage() {
   const [celularOpen, setCelularOpen] = useState(false);
   const [celularValue, setCelularValue] = useState('');
   const [celularSaving, setCelularSaving] = useState(false);
+  const [generoOpen, setGeneroOpen] = useState(false);
+  const [generoValue, setGeneroValue] = useState('');
+  const [generoSaving, setGeneroSaving] = useState(false);
   const [apoOpen, setApoOpen] = useState(false);
   const [apoValue, setApoValue] = useState('');
   const [apoSaving, setApoSaving] = useState(false);
@@ -344,8 +347,23 @@ export default function PerfilPage() {
                     >
                       <Pencil className="h-3.5 w-3.5" />
                     </button>
-                  </div>
+              </div>
+              <div className="flex items-center gap-3 rounded-xl border bg-card p-3.5 transition-all hover:shadow-sm">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                  <User className="h-5 w-5 text-primary" />
                 </div>
+                <div className="flex-1">
+                  <p className="text-xs text-muted-foreground">Género</p>
+                  <p className="font-semibold text-foreground capitalize">{user.genero || 'No registrado'}</p>
+                </div>
+                <button
+                  onClick={() => { setGeneroValue(user.genero || ''); setGeneroOpen(true); }}
+                  className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
                 <div className="flex items-center gap-3 rounded-xl border bg-card p-3.5 transition-all hover:shadow-sm">
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
                     <Phone className="h-5 w-5 text-primary" />
@@ -410,6 +428,53 @@ export default function PerfilPage() {
                       <Button onClick={handleApoNombreUpdate} disabled={apoNombreSaving} className="gap-2">
                         {apoNombreSaving && <Loader2 className="h-4 w-4 animate-spin" />}
                         {apoNombreSaving ? 'Guardando...' : 'Guardar'}
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+              <Dialog open={generoOpen} onOpenChange={setGeneroOpen}>
+                <DialogContent className="sm:max-w-sm">
+                  <DialogHeader>
+                    <DialogTitle>Editar Género</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 py-2">
+                    <div className="space-y-2">
+                      <Label>Género</Label>
+                      <select
+                        value={generoValue}
+                        onChange={(e) => setGeneroValue(e.target.value)}
+                        className="flex h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      >
+                        <option value="">Seleccionar...</option>
+                        <option value="masculino">Masculino</option>
+                        <option value="femenino">Femenino</option>
+                        <option value="otro">Otro</option>
+                      </select>
+                    </div>
+                    <div className="flex justify-end gap-3 pt-2">
+                      <Button variant="outline" onClick={() => setGeneroOpen(false)} disabled={generoSaving}>Cancelar</Button>
+                      <Button onClick={async () => {
+                        setGeneroSaving(true);
+                        try {
+                          const res = await fetch('/api/auth/actualizar-perfil', {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ id: user.id, genero: generoValue || null }),
+                          });
+                          if (!res.ok) { const err = await res.json(); throw new Error(err.error); }
+                          await refreshProfile();
+                          toast.success('Género actualizado');
+                          setGeneroOpen(false);
+                        } catch (err: any) {
+                          toast.error(err.message);
+                        } finally {
+                          setGeneroSaving(false);
+                        }
+                      }} disabled={generoSaving} className="gap-2">
+                        {generoSaving && <Loader2 className="h-4 w-4 animate-spin" />}
+                        {generoSaving ? 'Guardando...' : 'Guardar'}
                       </Button>
                     </div>
                   </div>
