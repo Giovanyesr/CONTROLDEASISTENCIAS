@@ -16,6 +16,7 @@ import {
   X,
   ChevronRight,
   CalendarOff,
+  UserCog,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
@@ -32,6 +33,7 @@ const navItems = [
   { href: '/perfil', label: 'Mi Perfil', icon: UserCircle, roles: ['admin', 'director', 'tutor', 'brigadier', 'alumno'] },
   { href: '/brigadieres', label: 'Brigadieres', icon: ShieldCheck, roles: ['admin'] },
   { href: '/dias-no-laborables', label: 'Días No Laborables', icon: CalendarOff, roles: ['admin'] },
+  { href: '/roles', label: 'Roles', icon: UserCog, roles: ['admin'] },
 ];
 
 export function Sidebar() {

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, QrCode, Users, History, FileCheck, UserCircle, ShieldCheck, CalendarOff, LogOut } from 'lucide-react';
+import { LayoutDashboard, QrCode, Users, History, FileCheck, UserCircle, ShieldCheck, CalendarOff, LogOut, UserCog } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 
@@ -15,6 +15,7 @@ const items = [
   { href: '/perfil', label: 'Perfil', icon: UserCircle, roles: ['admin', 'director', 'tutor', 'brigadier', 'alumno'] },
   { href: '/brigadieres', label: 'Brigadieres', icon: ShieldCheck, roles: ['admin'] },
   { href: '/dias-no-laborables', label: 'No Laborables', icon: CalendarOff, roles: ['admin'] },
+  { href: '/roles', label: 'Roles', icon: UserCog, roles: ['admin'] },
 ];
 
 export function MobileBottomNav() {
