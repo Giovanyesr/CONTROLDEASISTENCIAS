@@ -13,7 +13,6 @@ const items = [
   { href: '/historial', label: 'Historial', icon: History, roles: ['admin', 'director', 'tutor', 'brigadier', 'alumno'] },
   { href: '/justificaciones', label: 'Justificar', icon: FileCheck, roles: ['admin', 'director', 'tutor', 'brigadier'] },
   { href: '/perfil', label: 'Perfil', icon: UserCircle, roles: ['admin', 'director', 'tutor', 'brigadier', 'alumno'] },
-  { href: '/brigadieres', label: 'Brigadieres', icon: ShieldCheck, roles: ['admin'] },
   { href: '/dias-no-laborables', label: 'No Laborables', icon: CalendarOff, roles: ['admin'] },
   { href: '/roles', label: 'Roles', icon: UserCog, roles: ['admin'] },
 ];

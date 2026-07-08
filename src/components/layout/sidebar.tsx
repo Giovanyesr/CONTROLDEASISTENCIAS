@@ -31,7 +31,6 @@ const navItems = [
   { href: '/historial', label: 'Historial', icon: History, roles: ['admin', 'director', 'tutor', 'brigadier', 'alumno'] },
   { href: '/justificaciones', label: 'Justificaciones', icon: FileCheck, roles: ['admin', 'director', 'tutor', 'brigadier'] },
   { href: '/perfil', label: 'Mi Perfil', icon: UserCircle, roles: ['admin', 'director', 'tutor', 'brigadier', 'alumno'] },
-  { href: '/brigadieres', label: 'Brigadieres', icon: ShieldCheck, roles: ['admin'] },
   { href: '/dias-no-laborables', label: 'Días No Laborables', icon: CalendarOff, roles: ['admin'] },
   { href: '/roles', label: 'Roles', icon: UserCog, roles: ['admin'] },
 ];
