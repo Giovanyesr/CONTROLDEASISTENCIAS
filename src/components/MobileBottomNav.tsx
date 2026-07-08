@@ -7,14 +7,14 @@ import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 
 const items = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['alumno', 'brigadier'] },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'director', 'tutor', 'brigadier', 'alumno'] },
   { href: '/escaner', label: 'Escáner', icon: QrCode, roles: ['brigadier'] },
-  { href: '/estudiantes', label: 'Estudiantes', icon: Users, roles: ['brigadier'] },
-  { href: '/historial', label: 'Historial', icon: History, roles: ['alumno', 'brigadier'] },
-  { href: '/justificaciones', label: 'Justificar', icon: FileCheck, roles: ['brigadier'] },
-  { href: '/perfil', label: 'Perfil', icon: UserCircle, roles: ['alumno', 'brigadier'] },
-  { href: '/brigadieres', label: 'Brigadieres', icon: ShieldCheck, roles: ['brigadier'] },
-  { href: '/dias-no-laborables', label: 'No Laborables', icon: CalendarOff, roles: ['brigadier'] },
+  { href: '/estudiantes', label: 'Estudiantes', icon: Users, roles: ['admin', 'director', 'tutor', 'brigadier'] },
+  { href: '/historial', label: 'Historial', icon: History, roles: ['admin', 'director', 'tutor', 'brigadier', 'alumno'] },
+  { href: '/justificaciones', label: 'Justificar', icon: FileCheck, roles: ['admin', 'director', 'tutor', 'brigadier'] },
+  { href: '/perfil', label: 'Perfil', icon: UserCircle, roles: ['admin', 'director', 'tutor', 'brigadier', 'alumno'] },
+  { href: '/brigadieres', label: 'Brigadieres', icon: ShieldCheck, roles: ['admin'] },
+  { href: '/dias-no-laborables', label: 'No Laborables', icon: CalendarOff, roles: ['admin'] },
 ];
 
 export function MobileBottomNav() {

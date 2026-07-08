@@ -1,4 +1,4 @@
-export type Rol = 'alumno' | 'brigadier';
+export type Rol = 'admin' | 'director' | 'tutor' | 'brigadier' | 'alumno';
 export type EstadoPerfil = 'activo' | 'inactivo';
 export type EstadoAsistencia = 'presente' | 'tardanza' | 'falta_justificada' | 'falta_injustificada';
 

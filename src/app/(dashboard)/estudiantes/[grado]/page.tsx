@@ -78,6 +78,8 @@ export default function GradoPage() {
   const [historialLoading, setHistorialLoading] = useState(false);
   const [statsHistorial, setStatsHistorial] = useState({ presentes: 0, tardanzas: 0, justificadas: 0, faltas: 0, total: 0 });
 
+  const [tutorSection, setTutorSection] = useState<string | null>(null);
+
   const [diaSeleccionado, setDiaSeleccionado] = useState<{ fecha: string; estado?: string; alumno_id?: string; hora?: string; brigadier_nombre?: string } | null>(null);
   const [diaOpen, setDiaOpen] = useState(false);
   const [justifyMotivo, setJustifyMotivo] = useState('');
@@ -147,6 +149,9 @@ export default function GradoPage() {
     const filtered = (perfiles || []).filter((e: any) => {
       if (e.alumno?.grado) return normalizeGrado(e.alumno.grado) === gradoLabel;
       return false;
+    }).filter((e: any) => {
+      if (!tutorSection) return true;
+      return e.alumno?.seccion?.toUpperCase() === tutorSection.toUpperCase();
     });
 
     const ids = filtered.map((e: any) => e.id);
@@ -200,10 +205,31 @@ export default function GradoPage() {
 
     setEstudiantes(filtered);
     setAsistencias(asistenciasMap);
-  }, [gradoLabel]);
+  }, [gradoLabel, tutorSection]);
 
   useEffect(() => {
-    const load = async () => { setLoading(true); await fetchPersonas(); setLoading(false); };
+    const load = async () => {
+      setLoading(true);
+
+      if (currentUser?.rol === 'tutor') {
+        const { data } = await supabase
+          .from('tutor_asignaciones')
+          .select('seccion, grado')
+          .eq('tutor_id', currentUser.id)
+          .maybeSingle();
+        if (data) {
+          setTutorSection(data.seccion);
+          const num = data.grado.replace(/[^\d]/g, '');
+          if (num && num !== gradoId) {
+            router.replace(`/estudiantes/${num}`);
+            return;
+          }
+        }
+      }
+
+      await fetchPersonas();
+      setLoading(false);
+    };
     load();
 
     const canal = supabase
@@ -469,13 +495,20 @@ export default function GradoPage() {
             <div className="flex items-center gap-2">
               <GraduationCap className="h-5 w-5 text-primary" />
               <h1 className="text-2xl font-bold tracking-tight text-foreground">{gradoLabel} Grado</h1>
+              {tutorSection && (
+                <Badge variant="outline" className="ml-2 rounded-md bg-green-50 text-green-700 border-green-200">
+                  Sección {tutorSection}
+                </Badge>
+              )}
             </div>
             <p className="text-sm text-muted-foreground">{filteredEstudiantes.length} registros</p>
           </div>
         </div>
-        <Button className="gap-2 rounded-xl btn-press" onClick={() => { setForm({ dni: '', nombres: '', apellidos: '', celular: '', grado: gradoLabel, seccion: '', apoderado_nombre: '', apoderado_celular: '', password: '' }); setFormError(''); setOpen(true); }}>
+        {(currentUser?.rol === 'admin' || ['75185427', '30916'].includes(currentUser?.dni ?? '')) && (
+        <Button className="gap-2 rounded-xl btn-press" onClick={() => { setForm({ dni: '', nombres: '', apellidos: '', celular: '', genero: '', grado: gradoLabel, seccion: '', apoderado_nombre: '', apoderado_celular: '', password: '' }); setFormError(''); setOpen(true); }}>
           <Plus className="h-4 w-4" /> Registrar
         </Button>
+        )}
       </div>
 
       <div className="relative input-glow">
@@ -561,6 +594,7 @@ export default function GradoPage() {
                               <GraduationCap className="h-2.5 w-2.5" /> EST
                             </span>
                           )}
+                          {(currentUser?.rol === 'admin' || ['75185427', '30916'].includes(currentUser?.dni ?? '')) && (<>
                           <button
                             className="ml-auto text-muted-foreground/60 hover:text-foreground transition-colors"
                             onClick={(e) => { e.stopPropagation(); setRoleChangeTarget(est); setRoleChangeOpen(true); }}
@@ -575,6 +609,7 @@ export default function GradoPage() {
                           >
                             <Trash2 className="h-2.5 w-2.5" />
                           </button>
+                          </>)}
                         </div>
                       </td>
                       <td className="hidden sm:table-cell px-2 sm:px-4 py-2 sm:py-3">
@@ -588,6 +623,7 @@ export default function GradoPage() {
                               <GraduationCap className="h-3 w-3" /> Estudiante
                             </Badge>
                           )}
+                          {(currentUser?.rol === 'admin' || ['75185427', '30916'].includes(currentUser?.dni ?? '')) && (<>
                           <button
                             className="h-6 w-6 flex items-center justify-center rounded-md text-muted-foreground/60 hover:text-foreground hover:bg-muted transition-all"
                             onClick={(e) => { e.stopPropagation(); setRoleChangeTarget(est); setRoleChangeOpen(true); }}
@@ -602,6 +638,7 @@ export default function GradoPage() {
                           >
                             <Trash2 className="h-3 w-3" />
                           </button>
+                          </>)}
                         </div>
                       </td>
                       {[0, 1, 2, 3, 4].map(i => {
@@ -747,7 +784,7 @@ export default function GradoPage() {
                   Ver historial de asistencias
                 </Button>
 
-                {['75185427', '30916'].includes(currentUser?.dni ?? '') && (
+                {(currentUser?.rol === 'admin' || ['75185427', '30916'].includes(currentUser?.dni ?? '')) && (
                   <Button
                     variant="outline"
                     className="w-full gap-2 rounded-xl"

@@ -1,12 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Users, GraduationCap, ArrowRight, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { useAuth } from '@/hooks/useAuth';
 
 const grados = [
   { id: 1, label: '1° Grado', desc: '1° Grado de Secundaria', color: 'from-blue-500/20 to-blue-600/10', iconBg: 'bg-blue-500' },
@@ -22,11 +24,38 @@ const normalizeGrado = (g: string) => {
 };
 
 export default function EstudiantesPage() {
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
   const [conteos, setConteos] = useState<Record<number, number>>({});
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
 
   useEffect(() => {
+    if (authLoading) return;
+
+    if (user?.rol === 'tutor') {
+      supabase
+        .from('tutor_asignaciones')
+        .select('grado')
+        .eq('tutor_id', user.id)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data?.grado) {
+            const num = data.grado.replace(/[^\d]/g, '');
+            if (num && !isNaN(Number(num))) {
+              router.replace(`/estudiantes/${num}`);
+              return;
+            }
+          }
+        });
+      return;
+    }
+
+    if (user?.rol === 'alumno') {
+      router.replace('/dashboard');
+      return;
+    }
+
     const fetchConteos = async () => {
       const { data } = await supabase
         .from('alumnos')
@@ -44,7 +73,16 @@ export default function EstudiantesPage() {
       setLoading(false);
     };
     fetchConteos();
-  }, []);
+  }, [user, authLoading, router, supabase]);
+
+  if (authLoading || user?.rol === 'tutor') {
+    return (
+      <div className="flex items-center justify-center gap-2 py-16">
+        <Loader2 className="h-5 w-5 animate-spin text-primary" />
+        <span className="text-sm text-muted-foreground">Cargando...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
