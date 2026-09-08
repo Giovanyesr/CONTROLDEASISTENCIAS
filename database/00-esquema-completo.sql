@@ -32,11 +32,15 @@ CREATE INDEX idx_perfiles_uuid_qr ON perfiles(uuid_qr);
 
 -- ============================================================
 -- HELPERS DE ROL
+-- NOTA: SECURITY DEFINER para evitar recursión infinita en RLS
+-- (consultan perfiles desde políticas sobre la misma tabla).
 -- ============================================================
 CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS BOOLEAN
 LANGUAGE sql
 STABLE
+SECURITY DEFINER
+SET search_path = public
 AS $$
   SELECT EXISTS (
     SELECT 1 FROM public.perfiles
@@ -48,6 +52,8 @@ CREATE OR REPLACE FUNCTION public.is_staff()
 RETURNS BOOLEAN
 LANGUAGE sql
 STABLE
+SECURITY DEFINER
+SET search_path = public
 AS $$
   SELECT EXISTS (
     SELECT 1 FROM public.perfiles

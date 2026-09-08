@@ -44,7 +44,7 @@ export default function PerfilPage() {
   const supabase = createClient();
 
   useEffect(() => {
-    if (user?.rol === 'alumno') {
+    if (user?.rol === 'alumno' || user?.rol === 'brigadier') {
       supabase.from('alumnos').select('*').eq('perfil_id', user.id).maybeSingle().then(({ data }) => setAlumnoData(data));
     }
   }, [user]);
@@ -308,7 +308,7 @@ export default function PerfilPage() {
               </div>
             </div>
 
-            {user.rol === 'alumno' && alumnoData && (
+            {(user.rol === 'alumno' || user.rol === 'brigadier') && alumnoData && (
               <div className="space-y-3">
                 <p className="text-sm font-semibold text-foreground flex items-center gap-2">
                   <GraduationCap className="h-4 w-4 text-primary" />
