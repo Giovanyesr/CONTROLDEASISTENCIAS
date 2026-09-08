@@ -9,8 +9,8 @@
 
 ### 1.2 Configurar Base de Datos
 1. Ve a **SQL Editor** en Supabase
-2. Copia y pega el contenido de `database/00-schema.sql` y ejecútalo
-3. Copia y pega el contenido de `database/01-rls-policies.sql` y ejecútalo
+2. Copia y pega el contenido de `database/00-esquema-completo.sql` y ejecútalo
+3. Copia y pega el contenido de `database/00-esquema-completo.sql` y ejecútalo
 
 ### 1.3 Configurar Autenticación
 1. Ve a **Authentication > Providers**

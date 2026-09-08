@@ -33,17 +33,6 @@ CREATE INDEX idx_perfiles_uuid_qr ON perfiles(uuid_qr);
 -- ============================================================
 -- HELPERS DE ROL
 -- ============================================================
-CREATE OR REPLACE FUNCTION public.is_brigadier()
-RETURNS BOOLEAN
-LANGUAGE sql
-STABLE
-AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM public.perfiles
-    WHERE id = auth.uid() AND rol = 'brigadier'
-  );
-$$;
-
 CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS BOOLEAN
 LANGUAGE sql
@@ -84,17 +73,6 @@ CREATE TABLE alumnos (
 CREATE INDEX idx_alumnos_grado ON alumnos(grado);
 CREATE INDEX idx_alumnos_seccion ON alumnos(seccion);
 CREATE INDEX idx_alumnos_grado_seccion ON alumnos(grado, seccion);
-
--- ============================================================
--- TABLA: brigadieres
--- ============================================================
-CREATE TABLE brigadieres (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  perfil_id UUID NOT NULL REFERENCES perfiles(id) ON DELETE CASCADE,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  UNIQUE(perfil_id)
-);
 
 -- ============================================================
 -- TABLA: asistencias (alumno_id y brigadier_id -> perfiles)
@@ -323,10 +301,6 @@ CREATE TRIGGER trg_auditoria_alumnos
   AFTER INSERT OR UPDATE OR DELETE ON alumnos
   FOR EACH ROW EXECUTE FUNCTION registrar_auditoria();
 
-CREATE TRIGGER trg_auditoria_brigadieres
-  AFTER INSERT OR UPDATE OR DELETE ON brigadieres
-  FOR EACH ROW EXECUTE FUNCTION registrar_auditoria();
-
 -- ============================================================
 -- TRIGGERS DE updated_at
 -- ============================================================
@@ -338,49 +312,9 @@ CREATE TRIGGER trg_updated_at_alumnos
   BEFORE UPDATE ON alumnos
   FOR EACH ROW EXECUTE FUNCTION actualizar_updated_at();
 
-CREATE TRIGGER trg_updated_at_brigadieres
-  BEFORE UPDATE ON brigadieres
-  FOR EACH ROW EXECUTE FUNCTION actualizar_updated_at();
-
 CREATE TRIGGER trg_updated_at_asistencias
   BEFORE UPDATE ON asistencias
   FOR EACH ROW EXECUTE FUNCTION actualizar_updated_at();
-
--- ============================================================
--- VISTA: resumen diario
--- ============================================================
-CREATE OR REPLACE VIEW vista_resumen_diario AS
-SELECT
-  p.id,
-  p.dni,
-  p.nombres,
-  p.apellidos,
-  a.grado,
-  a.seccion,
-  asis.fecha,
-  asis.hora,
-  asis.estado,
-  asis.observaciones,
-  b.nombres AS brigadier_nombre,
-  b.apellidos AS brigadier_apellido,
-  j.estado_nuevo AS ultimo_estado_justificado,
-  j.motivo AS motivo_justificacion
-FROM perfiles p
-JOIN alumnos a ON a.perfil_id = p.id
-LEFT JOIN LATERAL (
-  SELECT * FROM asistencias
-  WHERE alumno_id = p.id
-  ORDER BY fecha DESC, hora DESC
-  LIMIT 1
-) asis ON true
-LEFT JOIN perfiles b ON b.id = asis.brigadier_id
-LEFT JOIN LATERAL (
-  SELECT * FROM justificaciones
-  WHERE asistencia_id = asis.id
-  ORDER BY created_at DESC
-  LIMIT 1
-) j ON true
-WHERE p.rol = 'alumno';
 
 -- ============================================================
 -- VISTA: estadísticas de brigadier
@@ -571,7 +505,6 @@ $$;
 -- ============================================================
 ALTER TABLE perfiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE alumnos ENABLE ROW LEVEL SECURITY;
-ALTER TABLE brigadieres ENABLE ROW LEVEL SECURITY;
 ALTER TABLE asistencias ENABLE ROW LEVEL SECURITY;
 ALTER TABLE justificaciones ENABLE ROW LEVEL SECURITY;
 ALTER TABLE evidencias ENABLE ROW LEVEL SECURITY;
@@ -600,12 +533,6 @@ CREATE POLICY alumnos_insert ON alumnos
   FOR INSERT WITH CHECK (is_staff());
 CREATE POLICY alumnos_update ON alumnos
   FOR UPDATE USING (auth.uid() = perfil_id OR is_staff());
-
--- brigadieres
-CREATE POLICY brigadieres_select ON brigadieres
-  FOR SELECT USING (auth.uid() = perfil_id OR is_staff());
-CREATE POLICY brigadieres_insert ON brigadieres
-  FOR INSERT WITH CHECK (is_staff());
 
 -- asistencias
 CREATE POLICY asistencias_select ON asistencias

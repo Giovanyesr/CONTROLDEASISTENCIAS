@@ -18,14 +18,16 @@ export async function POST(request: Request) {
 
     if (isCron) {
       const { data: primerBrigadier } = await supabase
-        .from('brigadieres')
-        .select('perfil_id')
+        .from('perfiles')
+        .select('id')
+        .eq('rol', 'brigadier')
+        .eq('estado', 'activo')
         .limit(1)
         .single();
       if (!primerBrigadier) {
         return NextResponse.json({ error: 'No hay brigadieres registrados' }, { status: 400 });
       }
-      brigadierId = primerBrigadier.perfil_id;
+      brigadierId = primerBrigadier.id;
     } else {
       const cookieStore = await cookies();
       const supabaseAuth = createServerClient(

@@ -28,13 +28,6 @@ export interface Alumno {
   updated_at: string;
 }
 
-export interface Brigadier {
-  id: string;
-  perfil_id: string;
-  created_at: string;
-  updated_at: string;
-}
-
 export interface Asistencia {
   id: string;
   alumno_id: string;
