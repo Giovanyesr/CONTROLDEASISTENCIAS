@@ -1,336 +1,348 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { useAuth } from '@/hooks/useAuth';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow
-} from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from '@/components/ui/dialog';
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue
-} from '@/components/ui/select';
-import { Search, FileEdit, Upload, FileText, Loader2, FileCheck, AlertCircle, CheckCircle2, XCircle } from 'lucide-react';
-import { getEstadoLabel, formatTime } from '@/lib/utils';
-import { useAuth } from '@/hooks/useAuth';
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from '@/components/ui/table';
+import {
+  Loader2, CheckCircle2, XCircle, Clock, Upload, FileText, Plus, Search, Inbox, ShieldAlert, Eye,
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 
-const estadoIcon: Record<string, any> = {
-  falta_injustificada: XCircle,
-  falta_justificada: CheckCircle2,
+const estadoBadge = (estado?: string) => {
+  const cfg: Record<string, { label: string; cls: string; dot: string }> = {
+    pendiente: { label: 'Pendiente', cls: 'text-amber-700 border-amber-200 bg-amber-50', dot: 'bg-amber-500' },
+    aprobada: { label: 'Aprobada', cls: 'text-emerald-700 border-emerald-200 bg-emerald-50', dot: 'bg-emerald-500' },
+    rechazada: { label: 'Rechazada', cls: 'text-red-700 border-red-200 bg-red-50', dot: 'bg-red-500' },
+  };
+  const c = cfg[estado || ''] || cfg.pendiente;
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium ${c.cls}`}>
+      <span className={`inline-block h-1.5 w-1.5 rounded-full ${c.dot}`} />
+      {c.label}
+    </span>
+  );
 };
 
 export default function JustificacionesPage() {
-  const [asistencias, setAsistencias] = useState<any[]>([]);
-  const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [estadoNuevo, setEstadoNuevo] = useState('');
-  const [motivo, setMotivo] = useState('');
-  const [evidencia, setEvidencia] = useState<File | null>(null);
-  const [subiendo, setSubiendo] = useState(false);
-  const [dialogOpen, setDialogOpen] = useState(false);
   const { user } = useAuth();
   const supabase = createClient();
+  const [loading, setLoading] = useState(true);
+  const [items, setItems] = useState<any[]>([]);
+  const [soloPendientes, setSoloPendientes] = useState(true);
 
-  const fetchAsistencias = useCallback(async (signal: AbortSignal) => {
+  // Director review
+  const [reviewTarget, setReviewTarget] = useState<any>(null);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [rechazoMotivo, setRechazoMotivo] = useState('');
+  const [reviewing, setReviewing] = useState(false);
+
+  // Student request
+  const [reqOpen, setReqOpen] = useState(false);
+  const [faltas, setFaltas] = useState<any[]>([]);
+  const [reqAsistencia, setReqAsistencia] = useState('');
+  const [reqMotivo, setReqMotivo] = useState('');
+  const [reqEvidencia, setReqEvidencia] = useState<File | null>(null);
+  const [reqSubiendo, setReqSubiendo] = useState(false);
+
+  const esDirector = user?.rol === 'director';
+  const esAlumno = user?.rol === 'alumno';
+
+  const fetchItems = useCallback(async () => {
+    setLoading(true);
     try {
       let query = supabase
-        .from('asistencias')
-        .select('*, alumno:perfiles!asistencias_alumno_id_fkey(nombres, apellidos, dni), justificaciones(id, motivo, created_at, brigadier_id, perfiles!justificaciones_brigadier_id_fkey(nombres, apellidos))')
-        .in('estado', ['falta_injustificada', 'falta_justificada'])
-        .order('fecha', { ascending: false });
+        .from('justificaciones')
+        .select(`
+          *,
+          alumno:alumno_id(nombres, apellidos, dni),
+          asistencia:asistencia_id(fecha, hora),
+          evidencias(id, nombre_archivo, url)
+        `)
+        .order('created_at', { ascending: false });
 
-      if (search) {
-        const { data: perfiles } = await supabase
-          .from('perfiles')
-          .select('id')
-          .or(`dni.ilike.%${search}%,nombres.ilike.%${search}%,apellidos.ilike.%${search}%`);
-        if (perfiles && perfiles.length > 0) {
-          query = query.in('alumno_id', perfiles.map(p => p.id));
-        } else {
-          setAsistencias([]);
-          setLoading(false);
-          return;
-        }
-      }
+      if (esAlumno) query = query.eq('alumno_id', user?.id);
+      else if (soloPendientes) query = query.eq('estado', 'pendiente');
 
       const { data } = await query;
-      if (signal.aborted) return;
-      setAsistencias(data || []);
-    } catch {
-      if (signal.aborted) return;
-      toast.error('Error al cargar asistencias');
-    } finally {
-      if (!signal.aborted) setLoading(false);
+      setItems(data || []);
+    } catch {} finally {
+      setLoading(false);
     }
-  }, [search]);
+  }, [esAlumno, soloPendientes, user?.id, supabase]);
 
   useEffect(() => {
-    const abortController = new AbortController();
-    fetchAsistencias(abortController.signal);
-    return () => abortController.abort();
-  }, [fetchAsistencias]);
+    if (!user) return;
+    fetchItems();
+  }, [user, fetchItems]);
 
-  const handleJustificar = async () => {
-    if (!selectedId || !estadoNuevo || !motivo || !user) {
-      toast.error('Completa todos los campos');
-      return;
-    }
+  const cargarFaltas = async () => {
+    if (!esAlumno) return;
+    const { data: asis } = await supabase
+      .from('asistencias')
+      .select('id, fecha, hora')
+      .eq('alumno_id', user?.id)
+      .eq('estado', 'falta_injustificada')
+      .order('fecha', { ascending: false });
 
-    setSubiendo(true);
+    const { data: pend } = await supabase
+      .from('justificaciones')
+      .select('asistencia_id')
+      .eq('alumno_id', user?.id)
+      .eq('estado', 'pendiente');
+
+    const pendIds = new Set((pend || []).map((p: any) => p.asistencia_id));
+    setFaltas((asis || []).filter((a: any) => !pendIds.has(a.id)));
+  };
+
+  const openNueva = async () => {
+    setReqAsistencia(''); setReqMotivo(''); setReqEvidencia(null);
+    await cargarFaltas();
+    setReqOpen(true);
+  };
+
+  const enviarSolicitud = async () => {
+    if (!reqAsistencia || !reqMotivo.trim()) { toast.error('Selecciona la falta y escribe el motivo'); return; }
+    setReqSubiendo(true);
     try {
-      const { data: rpcResult, error } = await supabase.rpc('justificar_asistencia', {
-        p_asistencia_id: selectedId,
-        p_brigadier_id: user.id,
-        p_estado_nuevo: estadoNuevo,
-        p_motivo: motivo,
+      const fd = new FormData();
+      fd.append('asistencia_id', reqAsistencia);
+      fd.append('motivo', reqMotivo.trim());
+      if (reqEvidencia) fd.append('file', reqEvidencia);
+      const res = await fetch('/api/justificaciones/solicitar', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      toast.success(data.mensaje || 'Solicitud enviada');
+      setReqOpen(false);
+      fetchItems();
+    } catch (err: any) { toast.error(err.message); }
+    finally { setReqSubiendo(false); }
+  };
+
+  const revisar = async (decision: 'aprobada' | 'rechazada') => {
+    if (decision === 'rechazada' && !rechazoMotivo.trim()) { toast.error('Indica el motivo del rechazo'); return; }
+    setReviewing(true);
+    try {
+      const res = await fetch('/api/justificaciones/revisar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ justificacion_id: reviewTarget.id, decision, motivo_rechazo: rechazoMotivo.trim() || null }),
       });
-
-      if (error) throw error;
-
-      if (evidencia && rpcResult?.exito) {
-        const { data: justificaciones } = await supabase
-          .from('justificaciones')
-          .select('id')
-          .eq('asistencia_id', selectedId)
-          .order('created_at', { ascending: false })
-          .limit(1);
-
-        if (justificaciones && justificaciones.length > 0) {
-          const fileName = `evidencia-${selectedId}-${Date.now()}.${evidencia.name.split('.').pop()}`;
-          const { error: uploadError } = await supabase.storage
-            .from('evidencias')
-            .upload(fileName, evidencia);
-
-          if (!uploadError) {
-            const { data: urlData } = supabase.storage.from('evidencias').getPublicUrl(fileName);
-            await supabase.from('evidencias').insert({
-              justificacion_id: justificaciones[0].id,
-              nombre_archivo: evidencia.name,
-              url: urlData.publicUrl,
-              tipo_mime: evidencia.type,
-              tamano_bytes: evidencia.size,
-            });
-          }
-        }
-      }
-
-      toast.success('Justificación registrada');
-      setDialogOpen(false);
-      setSelectedId(null);
-      setEstadoNuevo('');
-      setMotivo('');
-      setEvidencia(null);
-      setLoading(true);
-      fetchAsistencias(new AbortController().signal);
-    } catch (err: any) {
-      toast.error(err.message || 'Error al justificar');
-    } finally {
-      setSubiendo(false);
-    }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      toast.success(data.mensaje);
+      setReviewOpen(false);
+      setRechazoMotivo('');
+      fetchItems();
+    } catch (err: any) { toast.error(err.message); }
+    finally { setReviewing(false); }
   };
 
-  const openDialog = (id: string) => {
-    setSelectedId(id);
-    setEstadoNuevo('');
-    setMotivo('');
-    setEvidencia(null);
-    setDialogOpen(true);
+  const abrirRevision = (it: any) => {
+    setReviewTarget(it);
+    setRechazoMotivo('');
+    setReviewOpen(true);
   };
+
+  if (!user) return null;
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">Justificaciones</h1>
-        <p className="text-sm text-muted-foreground">Gestionar justificación de faltas</p>
+    <div className="mx-auto w-full max-w-6xl space-y-6 animate-fade-in">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between animate-fade-in-up">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Justificaciones</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {esDirector
+              ? 'Revisa y resuelve las solicitudes de justificación de tus estudiantes.'
+              : esAlumno
+                ? 'Consulta y envía tus solicitudes de justificación.'
+                : 'Consulta las solicitudes de justificación.'}
+          </p>
+        </div>
+        {esAlumno ? (
+          <Button onClick={openNueva} className="gap-2 rounded-lg self-start sm:self-auto">
+            <Plus className="h-4 w-4" /> Nueva solicitud
+          </Button>
+        ) : esDirector && (
+          <div className="flex items-center gap-2">
+            <Button variant={soloPendientes ? 'default' : 'outline'} size="sm" className="gap-2 rounded-lg" onClick={() => setSoloPendientes(true)}>
+              <Clock className="h-4 w-4" /> Pendientes
+            </Button>
+            <Button variant={!soloPendientes ? 'default' : 'outline'} size="sm" className="gap-2 rounded-lg" onClick={() => setSoloPendientes(false)}>
+              <Eye className="h-4 w-4" /> Todas
+            </Button>
+          </div>
+        )}
       </div>
 
-      <Card className="shadow-card">
-        <CardHeader className="pb-0">
-          <div className="relative">
-            <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por DNI, nombres..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-10 rounded-xl border-border bg-background pl-10 text-sm transition-all duration-200 placeholder:text-muted-foreground/60 focus:border-primary focus:ring-2 focus:ring-primary/20"
-            />
-          </div>
-        </CardHeader>
-        <CardContent className="pt-4">
-          <div className="overflow-x-auto rounded-xl border">
+      <Card className="shadow-card overflow-hidden">
+        {loading ? (
+          <CardContent className="space-y-3 p-5">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="skeleton h-12 w-full rounded-lg" />
+            ))}
+          </CardContent>
+        ) : items.length === 0 ? (
+          <CardContent className="flex flex-col items-center justify-center gap-3 py-16 text-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted">
+              <Inbox className="h-7 w-7 text-muted-foreground" />
+            </div>
+            <div>
+              <p className="text-base font-semibold text-foreground">No hay solicitudes</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {esDirector ? 'No tienes solicitudes pendientes por revisar.' : 'No hay solicitudes registradas.'}
+              </p>
+            </div>
+          </CardContent>
+        ) : (
+          <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="bg-muted/50">
-                  <TableHead className="font-semibold text-foreground">DNI</TableHead>
-                  <TableHead className="font-semibold text-foreground">Estudiante</TableHead>
-                  <TableHead className="font-semibold text-foreground">Fecha</TableHead>
-                  <TableHead className="font-semibold text-foreground">Hora</TableHead>
-                  <TableHead className="font-semibold text-foreground">Estado</TableHead>
-                  <TableHead className="font-semibold text-foreground">Justificado por</TableHead>
-                  <TableHead className="font-semibold text-foreground">Acción</TableHead>
+                <TableRow className="bg-muted/40">
+                  <TableHead className="font-semibold text-foreground/70">Alumno</TableHead>
+                  <TableHead className="font-semibold text-foreground/70">DNI</TableHead>
+                  <TableHead className="font-semibold text-foreground/70">Fecha</TableHead>
+                  <TableHead className="font-semibold text-foreground/70">Motivo</TableHead>
+                  <TableHead className="font-semibold text-foreground/70">Evidencia</TableHead>
+                  <TableHead className="font-semibold text-foreground/70">Estado</TableHead>
+                  <TableHead className="text-right font-semibold text-foreground/70">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={7}>
-                      <div className="flex items-center justify-center gap-2 py-8">
-                        <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                        <span className="text-sm text-muted-foreground">Cargando...</span>
-                      </div>
+                {items.map((it: any) => (
+                  <TableRow key={it.id} className="transition-colors hover:bg-muted/40">
+                    <TableCell className="text-sm font-medium text-foreground">
+                      {it.alumno?.nombres} {it.alumno?.apellidos}
+                    </TableCell>
+                    <TableCell className="tabular-nums text-sm">{it.alumno?.dni}</TableCell>
+                    <TableCell className="text-sm">{it.asistencia?.fecha || it.fecha}</TableCell>
+                    <TableCell className="max-w-[240px] truncate text-sm text-muted-foreground">{it.motivo}</TableCell>
+                    <TableCell>
+                      {it.evidencias?.length ? (
+                        <a href={it.evidencias[0].url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
+                          <FileText className="h-3.5 w-3.5" /> {it.evidencias[0].nombre_archivo}
+                        </a>
+                      ) : (
+                        <span className="text-xs text-muted-foreground/60">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell>{estadoBadge(it.estado)}</TableCell>
+                    <TableCell className="text-right">
+                      {esDirector && it.estado === 'pendiente' && (
+                        <Button size="sm" variant="outline" className="gap-2 rounded-lg" onClick={() => abrirRevision(it)}>
+                          <ShieldAlert className="h-4 w-4" /> Revisar
+                        </Button>
+                      )}
+                      {!esDirector && it.estado === 'rechazada' && it.motivo_rechazo && (
+                        <span className="text-xs text-red-600" title={it.motivo_rechazo}>{it.motivo_rechazo}</span>
+                      )}
                     </TableCell>
                   </TableRow>
-                ) : asistencias.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7}>
-                      <div className="flex flex-col items-center gap-2 py-8 text-center">
-                        <FileCheck className="h-8 w-8 text-muted-foreground/40" />
-                        <p className="text-sm text-muted-foreground">Sin faltas registradas</p>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  asistencias.map((a) => {
-                    const Icon = estadoIcon[a.estado] || AlertCircle;
-                    return (
-                      <TableRow key={a.id} className="transition-colors hover:bg-muted/30">
-                        <TableCell className="font-medium text-foreground">{a.alumno?.dni}</TableCell>
-                        <TableCell className="text-muted-foreground">{a.alumno?.nombres} {a.alumno?.apellidos}</TableCell>
-                        <TableCell className="text-muted-foreground">{a.fecha}</TableCell>
-                        <TableCell className="text-muted-foreground">{formatTime(a.hora)}</TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={a.estado === 'falta_justificada' ? 'outline' : 'destructive'}
-                            className="gap-1 rounded-md px-2.5 py-0.5 text-xs font-medium"
-                          >
-                            <Icon className={`h-3 w-3 ${a.estado === 'falta_justificada' ? 'text-blue-500' : ''}`} />
-                            {getEstadoLabel(a.estado)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {a.estado === 'falta_justificada' && a.justificaciones?.[0]?.perfiles
-                            ? `${a.justificaciones[0].perfiles.nombres} ${a.justificaciones[0].perfiles.apellidos}`
-                            : '—'}
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="gap-2 rounded-lg btn-press"
-                            onClick={() => openDialog(a.id)}
-                          >
-                            <FileEdit className="h-4 w-4" />
-                            {a.estado === 'falta_injustificada' ? 'Justificar' : 'Revisar'}
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
+                ))}
               </TableBody>
             </Table>
           </div>
-        </CardContent>
+        )}
       </Card>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-md animate-scale-in">
+      {/* Review Dialog (director) */}
+      <Dialog open={reviewOpen} onOpenChange={setReviewOpen}>
+        <DialogContent className="sm:max-w-lg rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="text-lg font-semibold">Justificar Falta</DialogTitle>
-            <DialogDescription>
-              Cambia el estado de la falta del estudiante seleccionado.
-            </DialogDescription>
+            <DialogTitle className="text-xl">Revisar solicitud</DialogTitle>
+            <DialogDescription>Aprueba o rechaza la justificación de la inasistencia.</DialogDescription>
           </DialogHeader>
-          {selectedId && (() => {
-            const asistencia = asistencias.find(a => a.id === selectedId);
-            if (!asistencia) return null;
-            return (
-              <div className="space-y-4">
-                <div className="rounded-xl bg-muted p-3">
-                  <p className="text-sm font-medium text-foreground">
-                    {asistencia.alumno?.nombres} {asistencia.alumno?.apellidos}
-                  </p>
-                  <p className="text-xs text-muted-foreground">DNI: {asistencia.alumno?.dni}</p>
+          {reviewTarget && (
+            <div className="space-y-4">
+              <div className="rounded-xl bg-muted p-4">
+                <p className="font-semibold text-foreground">{reviewTarget.alumno?.nombres} {reviewTarget.alumno?.apellidos}</p>
+                <p className="text-sm text-muted-foreground">DNI: {reviewTarget.alumno?.dni} · Fecha: {reviewTarget.asistencia?.fecha || reviewTarget.fecha}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-foreground">Motivo</p>
+                <p className="mt-1 rounded-lg border bg-card p-3 text-sm text-muted-foreground">{reviewTarget.motivo}</p>
+              </div>
+              {reviewTarget.evidencias?.length > 0 && (
+                <div>
+                  <p className="text-sm font-medium text-foreground">Evidencias</p>
+                  <div className="mt-1 flex flex-wrap gap-2">
+                    {reviewTarget.evidencias.map((e: any) => (
+                      <a key={e.id} href={e.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs text-primary hover:bg-primary/5">
+                        <FileText className="h-3.5 w-3.5" /> {e.nombre_archivo}
+                      </a>
+                    ))}
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">Estado actual:</span>
-                  <Badge
-                    variant={asistencia.estado === 'falta_justificada' ? 'outline' : 'destructive'}
-                    className="gap-1 rounded-md"
-                  >
-                    {getEstadoLabel(asistencia.estado)}
-                  </Badge>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Nuevo Estado</Label>
-                  <Select value={estadoNuevo} onValueChange={setEstadoNuevo}>
-                    <SelectTrigger className="rounded-xl border-border">
-                      <SelectValue placeholder="Seleccionar estado" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="falta_justificada">Falta Justificada</SelectItem>
-                      <SelectItem value="falta_injustificada">Falta Injustificada</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Motivo</Label>
-                  <Textarea
-                    placeholder="Describe el motivo de la justificación..."
-                    value={motivo}
-                    onChange={(e) => setMotivo(e.target.value)}
-                    rows={3}
-                    className="rounded-xl border-border transition-all duration-200 focus:border-primary focus:ring-2 focus:ring-primary/20"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Evidencia (opcional)</Label>
-                  <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-border p-3 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary">
-                    <Upload className="h-4 w-4" />
-                    <span>{evidencia ? evidencia.name : 'Subir archivo...'}</span>
-                    <Input
-                      type="file"
-                      accept=".jpg,.jpeg,.png,.pdf"
-                      onChange={(e) => setEvidencia(e.target.files?.[0] || null)}
-                      className="hidden"
-                    />
-                  </label>
-                  {evidencia && (
-                    <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <FileText className="h-3 w-3" />
-                      {evidencia.name}
-                    </p>
-                  )}
-                </div>
-                <Button
-                  onClick={handleJustificar}
-                  disabled={subiendo}
-                  className="w-full gap-2 rounded-xl bg-gradient-to-r from-primary to-primary-dark shadow-lg shadow-primary/20 transition-all duration-200 hover:shadow-xl hover:shadow-primary/30 active:scale-[0.98]"
-                >
-                  {subiendo ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Guardando...
-                    </>
-                  ) : (
-                    <>
-                      <FileEdit className="h-4 w-4" />
-                      Guardar Justificación
-                    </>
-                  )}
+              )}
+              <div className="space-y-2">
+                <Label htmlFor="rechazo-motivo">Motivo del rechazo (si corresponde)</Label>
+                <Textarea id="rechazo-motivo" rows={2} value={rechazoMotivo} onChange={(e) => setRechazoMotivo(e.target.value)} placeholder="La evidencia presentada no permite justificar la inasistencia." />
+              </div>
+              <div className="flex justify-end gap-3 pt-1">
+                <Button variant="outline" className="gap-2 rounded-lg text-red-600 hover:bg-red-50" disabled={reviewing} onClick={() => revisar('rechazada')}>
+                  {reviewing ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />} Rechazar
+                </Button>
+                <Button className="gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-700" disabled={reviewing} onClick={() => revisar('aprobada')}>
+                  {reviewing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />} Aprobar
                 </Button>
               </div>
-            );
-          })()}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Nueva solicitud (alumno) */}
+      <Dialog open={reqOpen} onOpenChange={setReqOpen}>
+        <DialogContent className="sm:max-w-md rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl">Nueva solicitud de justificación</DialogTitle>
+            <DialogDescription>Selecciona la falta, indica el motivo y adjunta una evidencia si tienes.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Falta a justificar</Label>
+              <Select value={reqAsistencia} onValueChange={setReqAsistencia}>
+                <SelectTrigger className="rounded-lg"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                <SelectContent>
+                  {faltas.length === 0 && <SelectItem value="__none" disabled>No tienes faltas por justificar</SelectItem>}
+                  {faltas.map((f: any) => (
+                    <SelectItem key={f.id} value={f.id}>{f.fecha} · {f.hora?.slice(0, 5)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="req-motivo">Motivo</Label>
+              <Textarea id="req-motivo" rows={3} value={reqMotivo} onChange={(e) => setReqMotivo(e.target.value)} placeholder="Describe el motivo de tu inasistencia..." className="rounded-lg" />
+            </div>
+            <div className="space-y-2">
+              <Label>Evidencia (opcional)</Label>
+              <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-border p-3 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary">
+                <Upload className="h-4 w-4" />
+                <span>{reqEvidencia ? reqEvidencia.name : 'Adjuntar archivo...'}</span>
+                <Input type="file" accept=".jpg,.jpeg,.png,.pdf" onChange={(e) => setReqEvidencia(e.target.files?.[0] || null)} className="hidden" />
+              </label>
+            </div>
+          </div>
+          <div className="flex justify-end gap-3 pt-2">
+            <Button variant="outline" className="rounded-lg" onClick={() => setReqOpen(false)} disabled={reqSubiendo}>Cancelar</Button>
+            <Button className="gap-2 rounded-lg" onClick={enviarSolicitud} disabled={reqSubiendo}>
+              {reqSubiendo && <Loader2 className="h-4 w-4 animate-spin" />}
+              {reqSubiendo ? 'Enviando...' : 'Enviar solicitud'}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

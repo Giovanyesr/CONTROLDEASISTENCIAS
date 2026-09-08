@@ -600,3 +600,209 @@ CREATE POLICY tutor_asignaciones_admin ON tutor_asignaciones
   FOR ALL USING (is_admin());
 CREATE POLICY tutor_asignaciones_tutor ON tutor_asignaciones
   FOR SELECT USING (tutor_id = auth.uid());
+
+-- ============================================================
+-- V2 — FLUJO DE JUSTIFICACIONES (PENDIENTE/APROBADA/RECHAZADA)
+-- SOLO el director aprueba/rechaza (FALTA -> JUSTIFICADO)
+-- ============================================================
+
+-- Ampliar justificaciones
+ALTER TABLE justificaciones
+  ADD COLUMN IF NOT EXISTS alumno_id UUID REFERENCES perfiles(id) ON DELETE CASCADE,
+  ADD COLUMN IF NOT EXISTS estado VARCHAR(20) NOT NULL DEFAULT 'pendiente'
+    CHECK (estado IN ('pendiente','aprobada','rechazada')),
+  ADD COLUMN IF NOT EXISTS revisado_por UUID REFERENCES perfiles(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS fecha_revision TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS motivo_rechazo TEXT;
+
+ALTER TABLE justificaciones ALTER COLUMN brigadier_id DROP NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_justif_estado ON justificaciones(estado);
+CREATE INDEX IF NOT EXISTS idx_justif_alumno ON justificaciones(alumno_id);
+
+-- Tabla notificaciones
+CREATE TABLE IF NOT EXISTS notificaciones (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  usuario_id UUID NOT NULL REFERENCES perfiles(id) ON DELETE CASCADE,
+  tipo VARCHAR(30) NOT NULL,
+  titulo VARCHAR(200) NOT NULL,
+  mensaje TEXT NOT NULL,
+  leida BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_notif_usuario ON notificaciones(usuario_id);
+CREATE INDEX IF NOT EXISTS idx_notif_usuario_leida ON notificaciones(usuario_id, leida);
+
+-- Helper is_director
+CREATE OR REPLACE FUNCTION public.is_director()
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.perfiles
+    WHERE id = auth.uid() AND rol = 'director' AND estado = 'activo'
+  );
+$$;
+
+-- crear_notificacion
+CREATE OR REPLACE FUNCTION public.crear_notificacion(
+  p_usuario_id UUID,
+  p_tipo VARCHAR,
+  p_titulo VARCHAR,
+  p_mensaje TEXT
+) RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  INSERT INTO public.notificaciones (usuario_id, tipo, titulo, mensaje)
+  VALUES (p_usuario_id, p_tipo, p_titulo, p_mensaje);
+END;
+$$;
+
+-- solicitar_justificacion (el alumno)
+CREATE OR REPLACE FUNCTION public.solicitar_justificacion(
+  p_asistencia_id UUID,
+  p_motivo TEXT
+) RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_asistencia RECORD;
+  v_existente RECORD;
+  v_alumno UUID;
+  v_nombre TEXT;
+BEGIN
+  SELECT * INTO v_asistencia FROM public.asistencias WHERE id = p_asistencia_id;
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('exito', FALSE, 'mensaje', 'Asistencia no encontrada');
+  END IF;
+
+  v_alumno := auth.uid();
+  IF v_asistencia.alumno_id <> v_alumno THEN
+    RETURN jsonb_build_object('exito', FALSE, 'mensaje', 'Solo puedes justificar tus propias faltas');
+  END IF;
+
+  IF v_asistencia.estado <> 'falta_injustificada' THEN
+    RETURN jsonb_build_object('exito', FALSE, 'mensaje', 'Solo se pueden justificar faltas no justificadas');
+  END IF;
+
+  IF p_motivo IS NULL OR length(trim(p_motivo)) = 0 THEN
+    RETURN jsonb_build_object('exito', FALSE, 'mensaje', 'Debes indicar el motivo');
+  END IF;
+
+  SELECT * INTO v_existente FROM public.justificaciones
+  WHERE asistencia_id = p_asistencia_id AND estado = 'pendiente';
+  IF FOUND THEN
+    RETURN jsonb_build_object('exito', FALSE, 'mensaje', 'Ya existe una solicitud pendiente para esta falta');
+  END IF;
+
+  SELECT (nombres || ' ' || apellidos)::text INTO v_nombre FROM public.perfiles WHERE id = v_alumno;
+
+  INSERT INTO public.justificaciones (
+    asistencia_id, alumno_id, brigadier_id, estado_anterior, estado_nuevo, motivo, estado
+  ) VALUES (
+    p_asistencia_id, v_alumno, v_alumno, 'falta_injustificada', 'falta_justificada', trim(p_motivo), 'pendiente'
+  );
+
+  INSERT INTO public.notificaciones (usuario_id, tipo, titulo, mensaje)
+  SELECT p.id, 'justificacion', 'Nueva solicitud de justificación',
+         format('%s (DNI %s) solicitó justificar la inasistencia del %s.',
+                v_nombre, (SELECT dni FROM public.perfiles WHERE id = v_alumno), v_asistencia.fecha::text)
+  FROM public.perfiles p
+  WHERE p.rol = 'director' AND p.estado = 'activo';
+
+  RETURN jsonb_build_object('exito', TRUE, 'mensaje', 'Solicitud enviada correctamente');
+END;
+$$;
+
+-- revisar_justificacion (SOLO director)
+CREATE OR REPLACE FUNCTION public.revisar_justificacion(
+  p_justificacion_id UUID,
+  p_decision VARCHAR,
+  p_motivo_rechazo TEXT DEFAULT NULL
+) RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_justif RECORD;
+  v_director UUID;
+BEGIN
+  IF NOT public.is_director() THEN
+    RETURN jsonb_build_object('exito', FALSE, 'mensaje', 'Solo el director puede revisar justificaciones');
+  END IF;
+
+  SELECT * INTO v_justif FROM public.justificaciones WHERE id = p_justificacion_id;
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('exito', FALSE, 'mensaje', 'Solicitud no encontrada');
+  END IF;
+
+  IF v_justif.estado <> 'pendiente' THEN
+    RETURN jsonb_build_object('exito', FALSE, 'mensaje', 'Esta solicitud ya fue revisada');
+  END IF;
+
+  v_director := auth.uid();
+
+  IF p_decision = 'aprobada' THEN
+    UPDATE public.justificaciones
+      SET estado = 'aprobada', revisado_por = v_director, fecha_revision = NOW()
+      WHERE id = p_justificacion_id;
+    UPDATE public.asistencias
+      SET estado = 'falta_justificada', observaciones = v_justif.motivo
+      WHERE id = v_justif.asistencia_id;
+    INSERT INTO public.notificaciones (usuario_id, tipo, titulo, mensaje)
+    VALUES (v_justif.alumno_id, 'justificacion', 'Solicitud aprobada',
+            format('Tu solicitud de justificación fue aprobada. La inasistencia del %s ahora figura como JUSTIFICADA.', v_justif.fecha::text));
+    RETURN jsonb_build_object('exito', TRUE, 'mensaje', 'Justificación aprobada');
+  ELSIF p_decision = 'rechazada' THEN
+    IF p_motivo_rechazo IS NULL OR length(trim(p_motivo_rechazo)) = 0 THEN
+      RETURN jsonb_build_object('exito', FALSE, 'mensaje', 'Debes indicar el motivo del rechazo');
+    END IF;
+    UPDATE public.justificaciones
+      SET estado = 'rechazada', revisado_por = v_director, fecha_revision = NOW(),
+          motivo_rechazo = trim(p_motivo_rechazo)
+      WHERE id = p_justificacion_id;
+    INSERT INTO public.notificaciones (usuario_id, tipo, titulo, mensaje)
+    VALUES (v_justif.alumno_id, 'justificacion', 'Solicitud rechazada',
+            format('Tu solicitud de justificación del %s fue rechazada. Motivo: %s', v_justif.fecha::text, trim(p_motivo_rechazo)));
+    RETURN jsonb_build_object('exito', TRUE, 'mensaje', 'Solicitud rechazada');
+  ELSE
+    RETURN jsonb_build_object('exito', FALSE, 'mensaje', 'Decisión inválida');
+  END IF;
+END;
+$$;
+
+-- Eliminar RPC viejo (permitía justificar a cualquiera)
+DROP FUNCTION IF EXISTS public.justificar_asistencia(uuid, uuid, varchar, text);
+
+-- RLS: justificaciones
+ALTER TABLE justificaciones ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS justificaciones_insert ON justificaciones;
+CREATE POLICY justificaciones_insert ON justificaciones
+  FOR INSERT WITH CHECK (auth.uid() = alumno_id OR is_staff());
+DROP POLICY IF EXISTS justificaciones_select ON justificaciones;
+CREATE POLICY justificaciones_select ON justificaciones
+  FOR SELECT USING (
+    auth.uid() = alumno_id
+    OR is_staff()
+    OR EXISTS (SELECT 1 FROM asistencias WHERE asistencias.id = justificaciones.asistencia_id AND asistencias.alumno_id = auth.uid())
+  );
+
+-- RLS: notificaciones
+ALTER TABLE notificaciones ENABLE ROW LEVEL SECURITY;
+CREATE POLICY notif_select ON notificaciones
+  FOR SELECT USING (auth.uid() = usuario_id);
+CREATE POLICY notif_update ON notificaciones
+  FOR UPDATE USING (auth.uid() = usuario_id)
+  WITH CHECK (auth.uid() = usuario_id);
+
+-- Realtime
+ALTER PUBLICATION supabase_realtime ADD TABLE IF NOT EXISTS public.notificaciones;
+ALTER PUBLICATION supabase_realtime ADD TABLE IF NOT EXISTS public.justificaciones;

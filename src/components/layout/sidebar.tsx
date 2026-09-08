@@ -18,12 +18,14 @@ import {
   CalendarOff,
   UserCog,
   LayoutGrid,
+  Bell,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import Image from 'next/image';
+import { useNotificaciones } from '@/hooks/useNotificaciones';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['director', 'tutor', 'brigadier', 'alumno'] },
@@ -31,7 +33,8 @@ const navItems = [
   { href: '/escaner', label: 'Escáner QR', icon: QrCode, roles: ['brigadier'] },
   { href: '/estudiantes', label: 'Estudiantes', icon: Users, roles: ['admin', 'director', 'tutor', 'brigadier'] },
   { href: '/historial', label: 'Historial', icon: History, roles: ['director', 'tutor', 'brigadier', 'alumno'] },
-  { href: '/justificaciones', label: 'Justificaciones', icon: FileCheck, roles: ['admin', 'director', 'tutor', 'brigadier'] },
+  { href: '/justificaciones', label: 'Justificaciones', icon: FileCheck, roles: ['admin', 'director', 'tutor', 'brigadier', 'alumno'] },
+  { href: '/notificaciones', label: 'Notificaciones', icon: Bell, roles: ['admin', 'director', 'tutor', 'brigadier', 'alumno'], notif: true },
   { href: '/perfil', label: 'Mi Perfil', icon: UserCircle, roles: ['admin', 'director', 'tutor', 'brigadier', 'alumno'] },
   { href: '/dias-no-laborables', label: 'Días No Laborables', icon: CalendarOff, roles: ['admin'] },
   { href: '/roles', label: 'Gestión de usuarios', icon: UserCog, roles: ['admin'] },
@@ -41,6 +44,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
+  const noLeidas = useNotificaciones();
 
   const filteredNav = navItems.filter((item) => item.roles.includes(user?.rol || ''));
 
@@ -129,6 +133,11 @@ export function Sidebar() {
                   )} />
                 </div>
                 <span>{item.label}</span>
+                {'notif' in item && item.notif && noLeidas > 0 && (
+                  <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-bold text-primary-foreground">
+                    {noLeidas > 99 ? '99+' : noLeidas}
+                  </span>
+                )}
               </Link>
             );
           })}

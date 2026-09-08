@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, QrCode, Users, History, FileCheck, UserCircle, ShieldCheck, CalendarOff, LogOut, UserCog } from 'lucide-react';
+import { LayoutDashboard, QrCode, Users, History, FileCheck, UserCircle, ShieldCheck, CalendarOff, LogOut, UserCog, Bell } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 
@@ -11,7 +11,8 @@ const items = [
   { href: '/escaner', label: 'Escáner', icon: QrCode, roles: ['brigadier'] },
   { href: '/estudiantes', label: 'Estudiantes', icon: Users, roles: ['admin', 'director', 'tutor', 'brigadier'] },
   { href: '/historial', label: 'Historial', icon: History, roles: ['director', 'tutor', 'brigadier', 'alumno'] },
-  { href: '/justificaciones', label: 'Justificar', icon: FileCheck, roles: ['admin', 'director', 'tutor', 'brigadier'] },
+  { href: '/justificaciones', label: 'Justificar', icon: FileCheck, roles: ['admin', 'director', 'tutor', 'brigadier', 'alumno'] },
+  { href: '/notificaciones', label: 'Notif.', icon: Bell, roles: ['admin', 'director', 'tutor', 'brigadier', 'alumno'] },
   { href: '/perfil', label: 'Perfil', icon: UserCircle, roles: ['admin', 'director', 'tutor', 'brigadier', 'alumno'] },
   { href: '/dias-no-laborables', label: 'No Laborables', icon: CalendarOff, roles: ['admin'] },
   { href: '/roles', label: 'Roles', icon: UserCog, roles: ['admin'] },

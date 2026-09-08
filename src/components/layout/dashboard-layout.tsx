@@ -7,6 +7,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Home } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 const breadcrumbMap: Record<string, string> = {
   dashboard: 'Dashboard',
@@ -24,7 +25,7 @@ const breadcrumbMap: Record<string, string> = {
 const routeRoles: Record<string, string[]> = {
   escaner: ['brigadier'],
   estudiantes: ['admin', 'director', 'tutor', 'brigadier'],
-  justificaciones: ['admin', 'director', 'tutor', 'brigadier'],
+  justificaciones: ['admin', 'director', 'tutor', 'brigadier', 'alumno'],
   brigadieres: ['brigadier'],
   'dias-no-laborables': ['admin'],
 };
@@ -75,10 +76,21 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-screen bg-background">
       <Sidebar />
       <main className="flex min-w-0 flex-1 flex-col">
-        <div className="flex items-center gap-2 border-b border-border/80 bg-card/70 px-6 py-3 shadow-sm">
-          <span className="text-sm font-semibold text-primary/80 tracking-wide mr-3 shrink-0">
-            I.E. 30916 San Francisco de Asís
-          </span>
+        <div className="flex items-center gap-2 border-b border-border/80 bg-card/70 px-6 py-2.5 shadow-sm">
+          <div className="mr-3 flex items-center gap-2.5 shrink-0">
+            <Image
+              src="/logo.png"
+              alt="Logo I.E."
+              width={32}
+              height={32}
+              className="h-8 w-8 rounded-lg object-contain ring-1 ring-primary/20"
+              priority
+            />
+            <div className="leading-tight">
+              <span className="block text-sm font-semibold text-primary/90 tracking-wide">I.E. 30916 San Francisco de Asís</span>
+              <span className="hidden sm:block text-[11px] text-muted-foreground/70 tracking-wider uppercase">Puente Capelo</span>
+            </div>
+          </div>
           <span className="text-xs text-muted-foreground/30">|</span>
           <Link
             href="/dashboard"

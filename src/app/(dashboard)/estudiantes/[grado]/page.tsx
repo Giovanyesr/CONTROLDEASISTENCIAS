@@ -18,7 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   Search, Loader2, Plus, GraduationCap, ArrowLeft, X,
   CalendarDays, Clock, UserCheck, AlertCircle, FileText, ShieldCheck,
-  RefreshCw, Upload, ChevronLeft, ChevronRight, Eye, EyeOff, Trash2, Download, Lock,
+  RefreshCw, ChevronLeft, ChevronRight, Eye, EyeOff, Trash2, Download, Lock,
 } from 'lucide-react';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -82,9 +82,6 @@ export default function GradoPage() {
 
   const [diaSeleccionado, setDiaSeleccionado] = useState<{ fecha: string; estado?: string; alumno_id?: string; hora?: string; brigadier_nombre?: string } | null>(null);
   const [diaOpen, setDiaOpen] = useState(false);
-  const [justifyMotivo, setJustifyMotivo] = useState('');
-  const [justifyEvidencia, setJustifyEvidencia] = useState<File | null>(null);
-  const [justifySubiendo, setJustifySubiendo] = useState(false);
   const [justificationInfo, setJustificationInfo] = useState<{ motivo: string; evidencias: { nombre: string; url: string }[]; brigadier_nombre?: string } | null>(null);
   const [loadingJustInfo, setLoadingJustInfo] = useState(false);
 
@@ -400,44 +397,6 @@ export default function GradoPage() {
     };
     fetchJustInfo();
   }, [diaOpen, diaSeleccionado]);
-
-  const handleJustify = async () => {
-    if (!diaSeleccionado || !diaSeleccionado.alumno_id || !justifyMotivo) {
-      toast.error('Completa el motivo');
-      return;
-    }
-    setJustifySubiendo(true);
-    try {
-      const res = await fetch('/api/asistencia/justificar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          alumno_id: diaSeleccionado.alumno_id,
-          fecha: diaSeleccionado.fecha,
-          motivo: justifyMotivo,
-          brigadier_id: currentUser?.id,
-        }),
-      });
-      if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Error'); }
-      const { asistencia_id } = await res.json();
-
-      if (justifyEvidencia && asistencia_id) {
-        const fd = new FormData();
-        fd.append('file', justifyEvidencia);
-        fd.append('asistencia_id', asistencia_id);
-        const evRes = await fetch('/api/asistencia/subir-evidencia', { method: 'POST', body: fd });
-        if (!evRes.ok) toast.error('La evidencia no pudo adjuntarse');
-      }
-
-      toast.success('Falta justificada correctamente');
-      setDiaOpen(false);
-      setJustifyMotivo('');
-      setJustifyEvidencia(null);
-      await fetchPersonas();
-      if (selectedStudent) await fetchMesAsistencias(selectedStudent.id, historialMes, historialAno, selectedStudent.alumno?.created_at ? new Date(selectedStudent.alumno.created_at).toISOString().split('T')[0] : undefined);
-    } catch (err: any) { toast.error(err.message); }
-    finally { setJustifySubiendo(false); }
-  };
 
   const handleRegister = async () => {
     setFormError('');
@@ -915,8 +874,6 @@ export default function GradoPage() {
                         onClick={async () => {
                           if (clickable && estado && selectedStudent) {
                             setDiaSeleccionado({ fecha, estado, alumno_id: selectedStudent.id });
-                            setJustifyMotivo('');
-                            setJustifyEvidencia(null);
                             setDiaOpen(true);
                             if (rawEstado && (estado === 'presente' || estado === 'tardanza')) {
                               try {
@@ -1071,32 +1028,6 @@ export default function GradoPage() {
                   </div>
                 )}
 
-                {diaSeleccionado.estado === 'falta_injustificada' && (
-                  <div className="w-full space-y-3 pt-2 border-t border-border animate-fade-in-up">
-                    <p className="text-sm font-medium text-foreground">Justificar falta</p>
-                    <Textarea
-                      placeholder="Motivo de la justificación..."
-                      value={justifyMotivo}
-                      onChange={(e) => setJustifyMotivo(e.target.value)}
-                      rows={2}
-                      className="rounded-xl border-border text-sm transition-all duration-200 focus:border-primary focus:ring-2 focus:ring-primary/20"
-                    />
-                    <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-border p-2.5 text-sm text-muted-foreground transition-all hover:border-primary hover:text-primary hover:bg-primary/5">
-                      <Upload className="h-4 w-4" />
-                      <span>{justifyEvidencia ? justifyEvidencia.name : 'Adjuntar evidencia'}</span>
-                      <Input type="file" accept=".jpg,.jpeg,.png,.pdf" onChange={(e) => setJustifyEvidencia(e.target.files?.[0] || null)} className="hidden" />
-                    </label>
-                    <Button
-                      onClick={handleJustify}
-                      disabled={justifySubiendo || !justifyMotivo}
-                      className="w-full gap-2 rounded-xl btn-press"
-                      size="sm"
-                    >
-                      {justifySubiendo ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
-                      {justifySubiendo ? 'Guardando...' : 'Justificar como Falta Justificada'}
-                    </Button>
-                  </div>
-                )}
               </div>
             </>
           )}
