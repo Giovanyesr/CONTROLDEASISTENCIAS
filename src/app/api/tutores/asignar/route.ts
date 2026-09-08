@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse } from 'next/server';
 
-const ADMIN_DNIS = ['75185427', '30916'];
+const ADMIN_DNIS = ['75185427', '30916', '00030916'];
 
 export async function GET(request: Request) {
   try {

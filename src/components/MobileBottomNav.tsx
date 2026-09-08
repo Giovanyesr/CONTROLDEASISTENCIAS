@@ -7,10 +7,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 
 const items = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'director', 'tutor', 'brigadier', 'alumno'] },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['director', 'tutor', 'brigadier', 'alumno'] },
   { href: '/escaner', label: 'Escáner', icon: QrCode, roles: ['brigadier'] },
   { href: '/estudiantes', label: 'Estudiantes', icon: Users, roles: ['admin', 'director', 'tutor', 'brigadier'] },
-  { href: '/historial', label: 'Historial', icon: History, roles: ['admin', 'director', 'tutor', 'brigadier', 'alumno'] },
+  { href: '/historial', label: 'Historial', icon: History, roles: ['director', 'tutor', 'brigadier', 'alumno'] },
   { href: '/justificaciones', label: 'Justificar', icon: FileCheck, roles: ['admin', 'director', 'tutor', 'brigadier'] },
   { href: '/perfil', label: 'Perfil', icon: UserCircle, roles: ['admin', 'director', 'tutor', 'brigadier', 'alumno'] },
   { href: '/dias-no-laborables', label: 'No Laborables', icon: CalendarOff, roles: ['admin'] },

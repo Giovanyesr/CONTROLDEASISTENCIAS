@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-const ADMIN_DNIS = ['75185427', '30916'];
+const ADMIN_DNIS = ['75185427', '30916', '00030916'];
 
 export async function POST(request: Request) {
   try {
@@ -32,7 +32,7 @@ CREATE POLICY "Usuarios ven su propio perfil o admins/directores ven todo" ON pe
   id = auth.uid()
   OR EXISTS (SELECT 1 FROM perfiles WHERE id = auth.uid() AND rol IN ('admin', 'director'))
 );
-UPDATE perfiles SET rol = 'admin' WHERE dni IN ('75185427', '30916') AND rol != 'admin';`;
+UPDATE perfiles SET rol = 'admin' WHERE dni IN ('75185427', '30916', '00030916') AND rol != 'admin';`;
 
     // Try the Supabase Management API database/query endpoint
     const projectRef = supabaseUrl.replace('https://', '').replace('.supabase.co', '');

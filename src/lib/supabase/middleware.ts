@@ -40,7 +40,12 @@ export async function updateSession(request: NextRequest) {
 
   if (user && isAuthPage) {
     const url = request.nextUrl.clone();
-    url.pathname = '/dashboard';
+    const { data: perfil } = await supabase
+      .from('perfiles')
+      .select('rol')
+      .eq('id', user.id)
+      .maybeSingle();
+    url.pathname = perfil?.rol === 'admin' ? '/admin' : '/dashboard';
     return NextResponse.redirect(url);
   }
 

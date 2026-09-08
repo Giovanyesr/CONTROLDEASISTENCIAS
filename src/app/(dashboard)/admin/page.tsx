@@ -26,23 +26,24 @@ import {
 import { Separator } from '@/components/ui/separator';
 import {
   ShieldCheck, GraduationCap, UserCircle, Eye, EyeOff, Loader2, Plus,
-  BookOpen, Trash2, Pencil, Search, Users, MoreVertical, RefreshCw, UserCheck, Power,
+  BookOpen, Trash2, Pencil, Search, Users, MoreVertical, RefreshCw, UserCheck, Power, Activity,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const gradosDisponibles = ['1°', '2°', '3°', '4°', '5°'];
 const seccionesDisponibles = ['Único'];
 
-const roleConfig: Record<string, { label: string; icon: any; empty: string; emptyDesc: string }> = {
-  admin: { label: 'Administradores', icon: ShieldCheck, empty: 'No hay administradores', emptyDesc: 'Aún no has registrado ningún administrador en el sistema.' },
-  director: { label: 'Directores', icon: UserCircle, empty: 'No hay directores', emptyDesc: 'Aún no has registrado ningún director en el sistema.' },
-  tutor: { label: 'Tutores', icon: BookOpen, empty: 'No hay tutores', emptyDesc: 'Aún no has registrado ningún tutor en el sistema.' },
+type RolKey = 'brigadier' | 'tutor' | 'director' | 'alumno';
+
+const secciones: Record<RolKey, { label: string; icon: any; empty: string; emptyDesc: string }> = {
   brigadier: { label: 'Brigadieres', icon: ShieldCheck, empty: 'No hay brigadieres', emptyDesc: 'Aún no has registrado ningún brigadier en el sistema.' },
-  alumno: { label: 'Estudiantes', icon: GraduationCap, empty: 'No hay estudiantes', emptyDesc: 'Aún no has registrado ningún estudiante en el sistema.' },
+  tutor: { label: 'Docentes', icon: BookOpen, empty: 'No hay docentes', emptyDesc: 'Aún no has registrado ningún docente en el sistema.' },
+  director: { label: 'Directores', icon: UserCircle, empty: 'No hay directores', emptyDesc: 'Aún no has registrado ningún director en el sistema.' },
+  alumno: { label: 'Alumnos', icon: GraduationCap, empty: 'No hay alumnos', emptyDesc: 'Aún no has registrado ningún alumno en el sistema.' },
 };
 
 const rolSingular: Record<string, string> = {
-  admin: 'Administrador', director: 'Director', tutor: 'Tutor', brigadier: 'Brigadier', alumno: 'Estudiante',
+  brigadier: 'Brigadier', tutor: 'Docente', director: 'Director', alumno: 'Alumno',
 };
 
 const estadoBadge = (estado?: string) => {
@@ -55,12 +56,13 @@ const estadoBadge = (estado?: string) => {
   );
 };
 
-export default function RolesPage() {
+export default function AdminPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const supabase = createClient();
 
-  const [activeTab, setActiveTab] = useState('brigadier');
+  const [resumen, setResumen] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState<RolKey>('brigadier');
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -85,6 +87,11 @@ export default function RolesPage() {
 
   const esAdmin = !authLoading && user && (user.rol === 'admin' || ['75185427', '30916', '00030916'].includes(user.dni));
 
+  const fetchResumen = useCallback(async () => {
+    const res = await fetch('/api/admin/resumen', { headers: { 'x-admin-dni': user?.dni || '' } });
+    if (res.ok) setResumen(await res.json());
+  }, [user]);
+
   const fetchUsers = useCallback(async (rol: string) => {
     setLoading(true);
     setError(false);
@@ -103,8 +110,9 @@ export default function RolesPage() {
   useEffect(() => {
     if (authLoading) return;
     if (!esAdmin) { router.replace('/dashboard'); return; }
+    fetchResumen();
     fetchUsers(activeTab);
-  }, [user, authLoading, activeTab, esAdmin, router, fetchUsers]);
+  }, [user, authLoading, activeTab, esAdmin, router, fetchResumen, fetchUsers]);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return users;
@@ -127,7 +135,7 @@ export default function RolesPage() {
     if (!form.dni || form.dni.length !== 8) { toast.error('El DNI debe tener 8 dígitos'); return; }
     if (!form.nombres || !form.apellidos) { toast.error('Completa nombres y apellidos'); return; }
     if (!form.password || form.password.length < 6) { toast.error('La contraseña debe tener mínimo 6 caracteres'); return; }
-    if (activeTab !== 'director' && activeTab !== 'admin' && (!form.grado || !form.seccion)) { toast.error('Selecciona grado y sección'); return; }
+    if (activeTab !== 'director' && (!form.grado || !form.seccion)) { toast.error('Selecciona grado y sección'); return; }
 
     setSubmitting(true);
     try {
@@ -139,6 +147,7 @@ export default function RolesPage() {
       if (!res.ok) { const err = await res.json(); throw new Error(err.error); }
       toast.success(`${rolSingular[activeTab]} creado correctamente`);
       setCreateOpen(false);
+      fetchResumen();
       fetchUsers(activeTab);
     } catch (err: any) { toast.error(err.message); }
     finally { setSubmitting(false); }
@@ -155,6 +164,7 @@ export default function RolesPage() {
       if (!res.ok) { const err = await res.json(); throw new Error(err.error); }
       toast.success('Usuario actualizado correctamente');
       setEditOpen(false);
+      fetchResumen();
       fetchUsers(activeTab);
     } catch (err: any) { toast.error(err.message); }
     finally { setSubmitting(false); }
@@ -180,6 +190,7 @@ export default function RolesPage() {
       const res = await fetch(`/api/auth/eliminar-alumno?id=${u.id}`, { method: 'DELETE' });
       if (!res.ok) { const err = await res.json(); throw new Error(err.error); }
       toast.success('Usuario eliminado correctamente');
+      fetchResumen();
       fetchUsers(activeTab);
     } catch (err: any) { toast.error(err.message); }
   };
@@ -194,7 +205,7 @@ export default function RolesPage() {
         body: JSON.stringify({ adminDni: user?.dni, tutor_id: assignTutorId, grado: assignGrado, seccion: assignSeccion }),
       });
       if (!res.ok) { const err = await res.json(); throw new Error(err.error); }
-      toast.success('Tutor asignado correctamente');
+      toast.success('Docente asignado correctamente');
       setTutorAssignOpen(false);
       fetchUsers(activeTab);
     } catch (err: any) { toast.error(err.message); }
@@ -203,9 +214,20 @@ export default function RolesPage() {
 
   if (authLoading) return <div className="flex items-center justify-center gap-2 py-20"><Loader2 className="h-5 w-5 animate-spin text-primary" /><span className="text-sm text-muted-foreground">Cargando...</span></div>;
 
-  const current = roleConfig[activeTab];
+  const tabKeys = Object.keys(secciones) as RolKey[];
+  const current = secciones[activeTab];
   const CurrentIcon = current.icon;
-  const tabKeys = Object.keys(roleConfig);
+
+  const stats = [
+    { label: 'Brigadieres', value: resumen?.counts?.brigadier ?? 0, icon: ShieldCheck, color: 'text-amber-600', bg: 'bg-amber-100' },
+    { label: 'Docentes', value: resumen?.counts?.tutor ?? 0, icon: BookOpen, color: 'text-green-600', bg: 'bg-green-100' },
+    { label: 'Directores', value: resumen?.counts?.director ?? 0, icon: UserCircle, color: 'text-blue-600', bg: 'bg-blue-100' },
+    { label: 'Alumnos', value: resumen?.counts?.alumno ?? 0, icon: GraduationCap, color: 'text-sky-600', bg: 'bg-sky-100' },
+    { label: 'Alumnos Activos', value: resumen?.alumnosActivos ?? 0, icon: UserCheck, color: 'text-emerald-600', bg: 'bg-emerald-100' },
+    { label: 'Presentes Hoy', value: resumen?.asistenciaHoy?.presentes ?? 0, icon: Activity, color: 'text-green-600', bg: 'bg-green-100' },
+    { label: 'Tardanzas Hoy', value: resumen?.asistenciaHoy?.tardanzas ?? 0, icon: Activity, color: 'text-amber-600', bg: 'bg-amber-100' },
+    { label: 'Faltas Hoy', value: (resumen?.asistenciaHoy?.faltas_justificadas ?? 0) + (resumen?.asistenciaHoy?.faltas_injustificadas ?? 0), icon: Activity, color: 'text-red-600', bg: 'bg-red-100' },
+  ];
 
   const TableSkeleton = () => (
     <Card className="shadow-card overflow-hidden">
@@ -233,24 +255,47 @@ export default function RolesPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between animate-fade-in-up">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Gestión de usuarios</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Administra los usuarios, perfiles y accesos del sistema.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Panel de Administración</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Control total de brigadieres, docentes, directores y alumnos.</p>
         </div>
         <Button onClick={openCreate} className="gap-2 rounded-lg btn-press self-start sm:self-auto">
           <Plus className="h-4 w-4" /> Nuevo {rolSingular[activeTab]}
         </Button>
       </div>
 
+      {/* Stats */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4 animate-fade-in-up">
+        {stats.map((s, i) => {
+          const Icon = s.icon;
+          return (
+            <Card key={s.label} className="shadow-card" style={{ animationDelay: `${i * 40}ms` }}>
+              <CardContent className="flex items-center justify-between p-4 sm:p-5">
+                <div>
+                  <p className="text-2xl font-bold tracking-tight text-foreground tabular-nums">{s.value}</p>
+                  <p className="text-xs font-medium text-muted-foreground/80">{s.label}</p>
+                </div>
+                <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${s.bg}`}>
+                  <Icon className={`h-5 w-5 ${s.color}`} />
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="animate-fade-in-up">
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as RolKey)} className="animate-fade-in-up">
         <div className="overflow-x-auto pb-1">
           <TabsList className="inline-flex w-max gap-1 rounded-xl bg-muted p-1">
             {tabKeys.map((key) => {
-              const Icon = roleConfig[key].icon;
+              const Icon = secciones[key].icon;
               return (
                 <TabsTrigger key={key} value={key} className="gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors">
                   <Icon className="h-4 w-4" />
-                  <span>{roleConfig[key].label}</span>
+                  <span>{secciones[key].label}</span>
+                  <span className="ml-0.5 rounded-md bg-background/60 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums">
+                    {resumen?.counts?.[key] ?? 0}
+                  </span>
                 </TabsTrigger>
               );
             })}
@@ -268,7 +313,7 @@ export default function RolesPage() {
                     <UserCheck className="h-7 w-7 text-red-500" />
                   </div>
                   <div>
-                    <p className="text-base font-semibold text-foreground">No pudimos cargar los {roleConfig[key].label.toLowerCase()}</p>
+                    <p className="text-base font-semibold text-foreground">No pudimos cargar los {secciones[key].label.toLowerCase()}</p>
                     <p className="mt-1 text-sm text-muted-foreground">Verifica la conexión e inténtalo nuevamente.</p>
                   </div>
                   <Button variant="outline" className="gap-2 rounded-lg" onClick={() => fetchUsers(key)}>
@@ -283,8 +328,8 @@ export default function RolesPage() {
                     <CurrentIcon className="h-7 w-7 text-muted-foreground" />
                   </div>
                   <div>
-                    <p className="text-base font-semibold text-foreground">{current.empty}</p>
-                    <p className="mt-1 text-sm text-muted-foreground">{current.emptyDesc}</p>
+                    <p className="text-base font-semibold text-foreground">{secciones[key].empty}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{secciones[key].emptyDesc}</p>
                   </div>
                   <Button onClick={openCreate} className="mt-1 gap-2 rounded-lg">
                     <Plus className="h-4 w-4" /> Nuevo {rolSingular[key]}
@@ -293,7 +338,6 @@ export default function RolesPage() {
               </Card>
             ) : (
               <Card className="shadow-card overflow-hidden">
-                {/* Toolbar */}
                 <div className="flex flex-col gap-3 border-b border-border/70 p-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="relative w-full sm:max-w-xs">
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -309,7 +353,6 @@ export default function RolesPage() {
                   </div>
                 </div>
 
-                {/* Table */}
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
@@ -317,7 +360,7 @@ export default function RolesPage() {
                         <TableHead className="font-semibold text-foreground/70">Nombre completo</TableHead>
                         <TableHead className="font-semibold text-foreground/70">DNI</TableHead>
                         <TableHead className="font-semibold text-foreground/70">Correo</TableHead>
-                        <TableHead className="font-semibold text-foreground/70">{key === 'tutor' ? 'Grado / Sección' : 'Sección'}</TableHead>
+                        <TableHead className="font-semibold text-foreground/70">Sección</TableHead>
                         <TableHead className="font-semibold text-foreground/70">Estado</TableHead>
                         <TableHead className="text-right font-semibold text-foreground/70">Acciones</TableHead>
                       </TableRow>
@@ -437,7 +480,7 @@ export default function RolesPage() {
                 <option value="otro">Otro</option>
               </select>
             </div>
-            {activeTab !== 'director' && activeTab !== 'admin' && (
+            {activeTab !== 'director' && (
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Grado</Label>
@@ -512,7 +555,7 @@ export default function RolesPage() {
                 <option value="inactivo">Inactivo</option>
               </select>
             </div>
-            {activeTab !== 'director' && activeTab !== 'admin' && (
+            {activeTab !== 'director' && (
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Grado</Label>
@@ -549,8 +592,8 @@ export default function RolesPage() {
       <Dialog open={tutorAssignOpen} onOpenChange={setTutorAssignOpen}>
         <DialogContent className="sm:max-w-sm rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="text-xl">Asignar Tutor a Grado/Sección</DialogTitle>
-            <DialogDescription>Selecciona el grado y la sección del tutor.</DialogDescription>
+            <DialogTitle className="text-xl">Asignar Docente a Grado/Sección</DialogTitle>
+            <DialogDescription>Selecciona el grado y la sección del docente.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">

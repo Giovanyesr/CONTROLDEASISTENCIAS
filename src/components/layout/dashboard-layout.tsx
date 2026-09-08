@@ -17,7 +17,8 @@ const breadcrumbMap: Record<string, string> = {
   perfil: 'Mi Perfil',
   brigadieres: 'Brigadieres',
   'dias-no-laborables': 'Días No Laborables',
-  roles: 'Roles',
+  roles: 'Gestión de usuarios',
+  admin: 'Panel Admin',
 };
 
 const routeRoles: Record<string, string[]> = {

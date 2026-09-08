@@ -95,14 +95,14 @@ export function useAuth() {
 
     if (error || !data.user) throw new Error('Credenciales inválidas');
 
-    await loadProfile(data.user);
+    const perfil = await loadProfile(data.user);
     await supabase.from('sesiones').upsert({
       usuario_id: data.user.id,
       ultimo_acceso: new Date().toISOString(),
       activo: true,
     }, { onConflict: 'usuario_id' });
 
-    router.push('/dashboard');
+    router.push(perfil?.rol === 'admin' ? '/admin' : '/dashboard');
     router.refresh();
   };
 

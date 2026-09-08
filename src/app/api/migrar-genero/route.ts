@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 export async function POST(request: Request) {
   try {
     const { adminDni } = await request.json();
-    if (!['75185427', '30916'].includes(adminDni)) {
+    if (!['75185427', '30916', '00030916'].includes(adminDni)) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
 

@@ -504,7 +504,7 @@ export default function GradoPage() {
             <p className="text-sm text-muted-foreground">{filteredEstudiantes.length} registros</p>
           </div>
         </div>
-        {(currentUser?.rol === 'admin' || ['75185427', '30916'].includes(currentUser?.dni ?? '')) && (
+        {(currentUser?.rol === 'admin' || ['75185427', '30916', '00030916'].includes(currentUser?.dni ?? '')) && (
         <Button className="gap-2 rounded-xl btn-press" onClick={() => { setForm({ dni: '', nombres: '', apellidos: '', celular: '', genero: '', grado: gradoLabel, seccion: '', apoderado_nombre: '', apoderado_celular: '', password: '' }); setFormError(''); setOpen(true); }}>
           <Plus className="h-4 w-4" /> Registrar
         </Button>
@@ -594,7 +594,7 @@ export default function GradoPage() {
                               <GraduationCap className="h-2.5 w-2.5" /> EST
                             </span>
                           )}
-                          {(currentUser?.rol === 'admin' || ['75185427', '30916'].includes(currentUser?.dni ?? '')) && (<>
+                          {(currentUser?.rol === 'admin' || ['75185427', '30916', '00030916'].includes(currentUser?.dni ?? '')) && (<>
                           <button
                             className="ml-auto text-muted-foreground/60 hover:text-foreground transition-colors"
                             onClick={(e) => { e.stopPropagation(); setRoleChangeTarget(est); setRoleChangeOpen(true); }}
@@ -623,7 +623,7 @@ export default function GradoPage() {
                               <GraduationCap className="h-3 w-3" /> Estudiante
                             </Badge>
                           )}
-                          {(currentUser?.rol === 'admin' || ['75185427', '30916'].includes(currentUser?.dni ?? '')) && (<>
+                          {(currentUser?.rol === 'admin' || ['75185427', '30916', '00030916'].includes(currentUser?.dni ?? '')) && (<>
                           <button
                             className="h-6 w-6 flex items-center justify-center rounded-md text-muted-foreground/60 hover:text-foreground hover:bg-muted transition-all"
                             onClick={(e) => { e.stopPropagation(); setRoleChangeTarget(est); setRoleChangeOpen(true); }}
@@ -784,7 +784,7 @@ export default function GradoPage() {
                   Ver historial de asistencias
                 </Button>
 
-                {(currentUser?.rol === 'admin' || ['75185427', '30916'].includes(currentUser?.dni ?? '')) && (
+                {(currentUser?.rol === 'admin' || ['75185427', '30916', '00030916'].includes(currentUser?.dni ?? '')) && (
                   <Button
                     variant="outline"
                     className="w-full gap-2 rounded-xl"

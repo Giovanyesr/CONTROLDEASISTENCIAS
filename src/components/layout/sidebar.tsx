@@ -17,6 +17,7 @@ import {
   ChevronRight,
   CalendarOff,
   UserCog,
+  LayoutGrid,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
@@ -25,14 +26,15 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import Image from 'next/image';
 
 const navItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'director', 'tutor', 'brigadier', 'alumno'] },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['director', 'tutor', 'brigadier', 'alumno'] },
+  { href: '/admin', label: 'Panel Admin', icon: LayoutGrid, roles: ['admin'] },
   { href: '/escaner', label: 'Escáner QR', icon: QrCode, roles: ['brigadier'] },
   { href: '/estudiantes', label: 'Estudiantes', icon: Users, roles: ['admin', 'director', 'tutor', 'brigadier'] },
-  { href: '/historial', label: 'Historial', icon: History, roles: ['admin', 'director', 'tutor', 'brigadier', 'alumno'] },
+  { href: '/historial', label: 'Historial', icon: History, roles: ['director', 'tutor', 'brigadier', 'alumno'] },
   { href: '/justificaciones', label: 'Justificaciones', icon: FileCheck, roles: ['admin', 'director', 'tutor', 'brigadier'] },
   { href: '/perfil', label: 'Mi Perfil', icon: UserCircle, roles: ['admin', 'director', 'tutor', 'brigadier', 'alumno'] },
   { href: '/dias-no-laborables', label: 'Días No Laborables', icon: CalendarOff, roles: ['admin'] },
-  { href: '/roles', label: 'Roles', icon: UserCog, roles: ['admin'] },
+  { href: '/roles', label: 'Gestión de usuarios', icon: UserCog, roles: ['admin'] },
 ];
 
 export function Sidebar() {
@@ -107,15 +109,15 @@ export function Sidebar() {
                 href={item.href}
                 onClick={() => setOpen(false)}
                 className={cn(
-                  'group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 animate-fade-in',
+                  'group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 animate-fade-in focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
                   active
-                    ? 'bg-gradient-to-r from-primary/10 to-primary/5 text-primary shadow-sm'
+                    ? 'bg-primary/10 text-primary shadow-sm'
                     : 'text-muted-foreground hover:bg-primary/[0.06] hover:text-foreground'
                 )}
                 style={{ animationDelay: `${idx * 30}ms` }}
               >
                 {active && (
-                  <span className="absolute left-0 top-1/2 h-6 w-0.5 -translate-y-1/2 rounded-r-full bg-primary" />
+                  <span className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-primary" />
                 )}
                 <div className={cn(
                   'flex h-8 w-8 items-center justify-center rounded-lg transition-all duration-200',
