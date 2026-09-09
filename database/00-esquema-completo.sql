@@ -367,6 +367,13 @@ DECLARE
   v_inicio TIME;
   v_limite_tardanza TIME;
 BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM public.perfiles
+    WHERE id = auth.uid() AND rol = 'brigadier' AND estado = 'activo'
+  ) THEN
+    RETURN jsonb_build_object('exito', FALSE, 'mensaje', 'Solo brigadieres pueden registrar asistencia');
+  END IF;
+
   v_hora_actual := CURRENT_TIME;
   v_estado := calcular_estado_asistencia(v_hora_actual);
 
@@ -488,7 +495,7 @@ BEGIN
     SELECT p.id, p.nombres, p.apellidos
     FROM perfiles p
     INNER JOIN alumnos a ON a.perfil_id = p.id
-    WHERE p.rol = 'alumno'
+    WHERE p.rol IN ('alumno', 'brigadier')
       AND p.estado = 'activo'
       AND NOT EXISTS (
         SELECT 1 FROM asistencias asis
@@ -588,12 +595,12 @@ CREATE POLICY dnl_insert ON dias_no_laborables
 CREATE POLICY dnl_delete ON dias_no_laborables
   FOR DELETE USING (is_staff());
 
--- configuración: leer todos, actualizar staff
+-- configuración: leer todos, actualizar SOLO admin
 CREATE POLICY config_select_all ON configuracion_asistencia
   FOR SELECT USING (true);
-CREATE POLICY config_update_staff ON configuracion_asistencia
-  FOR UPDATE USING (is_staff())
-  WITH CHECK (is_staff());
+CREATE POLICY config_update_admin ON configuracion_asistencia
+  FOR UPDATE USING (is_admin())
+  WITH CHECK (is_admin());
 
 -- tutor_asignaciones
 CREATE POLICY tutor_asignaciones_admin ON tutor_asignaciones
@@ -663,7 +670,18 @@ BEGIN
 END;
 $$;
 
--- solicitar_justificacion (el alumno)
+-- solicitar_justificacion (el alumno o brigadier dueño de la falta)
+CREATE OR REPLACE FUNCTION public.dias_habiles_desde(p_fecha DATE)
+RETURNS INTEGER
+LANGUAGE sql
+STABLE
+AS $$
+  SELECT count(*)::int
+  FROM generate_series(p_fecha::timestamp + interval '1 day', CURRENT_DATE::timestamp, interval '1 day') d
+  WHERE extract(isodow FROM d) < 6
+    AND NOT EXISTS (SELECT 1 FROM public.dias_no_laborables n WHERE n.fecha = d::date);
+$$;
+
 CREATE OR REPLACE FUNCTION public.solicitar_justificacion(
   p_asistencia_id UUID,
   p_motivo TEXT
@@ -694,6 +712,10 @@ BEGIN
 
   IF p_motivo IS NULL OR length(trim(p_motivo)) = 0 THEN
     RETURN jsonb_build_object('exito', FALSE, 'mensaje', 'Debes indicar el motivo');
+  END IF;
+
+  IF public.dias_habiles_desde(v_asistencia.fecha) > 5 THEN
+    RETURN jsonb_build_object('exito', FALSE, 'mensaje', 'Solo puedes justificar faltas dentro de los últimos 5 días hábiles');
   END IF;
 
   SELECT * INTO v_existente FROM public.justificaciones

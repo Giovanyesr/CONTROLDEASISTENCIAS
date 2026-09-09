@@ -32,7 +32,7 @@ const navItems = [
   { href: '/admin', label: 'Panel Admin', icon: LayoutGrid, roles: ['admin'] },
   { href: '/escaner', label: 'Escáner QR', icon: QrCode, roles: ['brigadier'] },
   { href: '/estudiantes', label: 'Estudiantes', icon: Users, roles: ['admin', 'director', 'tutor', 'brigadier'] },
-  { href: '/historial', label: 'Historial', icon: History, roles: ['director', 'tutor', 'brigadier', 'alumno'] },
+  { href: '/historial', label: 'Historial', icon: History, roles: ['director', 'tutor', 'brigadier'] },
   { href: '/justificaciones', label: 'Justificaciones', icon: FileCheck, roles: ['admin', 'director', 'tutor', 'brigadier', 'alumno'] },
   { href: '/notificaciones', label: 'Notificaciones', icon: Bell, roles: ['admin', 'director', 'tutor', 'brigadier', 'alumno'], notif: true },
   { href: '/perfil', label: 'Mi Perfil', icon: UserCircle, roles: ['admin', 'director', 'tutor', 'brigadier', 'alumno'] },

@@ -24,6 +24,8 @@ import {
   Loader2,
   Zap,
   ChevronRight,
+  User,
+  GraduationCap,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -71,9 +73,11 @@ export default function DashboardPage() {
   const [dataLoaded, setDataLoaded] = useState(false);
   const [ultimosRegistros, setUltimosRegistros] = useState<any[]>([]);
   const [misStats, setMisStats] = useState<any>(null);
+  const [miAlumno, setMiAlumno] = useState<any>(null);
   const supabase = createClient();
 
   const esBrigadier = user?.rol === 'brigadier';
+  const esEstudiante = user?.rol === 'alumno' || user?.rol === 'brigadier';
 
   const [mesAsistencias, setMesAsistencias] = useState<Record<string, string>>({});
   const [diaSeleccionado, setDiaSeleccionado] = useState<{ fecha: string; estado?: string; hora?: string; brigadier_nombre?: string } | null>(null);
@@ -125,23 +129,16 @@ export default function DashboardPage() {
     fetchDias();
 
     const cargarDashboard = async () => {
-      if (esBrigadier) {
-        const { data: dashboard } = await supabase
-          .from('vista_dashboard')
-          .select('*')
-          .single();
-        setData(dashboard);
-      }
-
-      if (user?.rol === 'alumno' && user?.id) {
+      if (esEstudiante && user?.id) {
         const { data: alumno } = await supabase
           .from('alumnos')
-          .select('created_at')
+          .select('created_at, grado, seccion')
           .eq('perfil_id', user.id)
           .single();
         if (alumno?.created_at) {
           setFechaRegistro(new Date(alumno.created_at).toISOString().split('T')[0]);
         }
+        setMiAlumno(alumno || null);
 
         const { data: stats } = await supabase
           .from('asistencias')
@@ -170,7 +167,7 @@ export default function DashboardPage() {
         .order('created_at', { ascending: false })
         .limit(10);
 
-      if (user?.rol === 'alumno' && user?.id) {
+      if (esEstudiante && user?.id) {
         query.eq('alumno_id', user.id);
       }
 
@@ -195,7 +192,7 @@ export default function DashboardPage() {
   const statsMap = Object.fromEntries((misStats ?? []).map((s: any) => [s.fecha, s.estado]));
   const hoyStr = getPeruDate();
   let presentes = 0, tardanzas = 0, faltasJustificadas = 0, faltasInjustificadas = 0;
-  if (!esBrigadier && fechaRegistro) {
+  if (fechaRegistro) {
     const inicio = new Date(fechaRegistro);
     const fin = new Date(hoyStr);
     for (let d = new Date(inicio); d <= fin; d.setDate(d.getDate() + 1)) {
@@ -214,13 +211,10 @@ export default function DashboardPage() {
     faltasJustificadas = (misStats ?? []).filter((s: any) => s.estado === 'falta_justificada').length;
     faltasInjustificadas = (misStats ?? []).filter((s: any) => s.estado === 'falta_injustificada').length;
   }
-  const totalAsistencia = (data?.presentes_hoy ?? 0) + (data?.tardanzas_hoy ?? 0);
-  const totalEstudiantes = data?.total_estudiantes ?? 1;
-  const porcentajeGeneral = Math.round((totalAsistencia / totalEstudiantes) * 100);
   const totalMisRegistros = presentes + tardanzas + faltasJustificadas + faltasInjustificadas;
   const porcentajePersonal = totalMisRegistros > 0 ? Math.round(((presentes + tardanzas) / totalMisRegistros) * 100) : 0;
 
-  const pctValue = esBrigadier ? porcentajeGeneral : porcentajePersonal;
+  const pctValue = porcentajePersonal;
   const pctColor = pctValue >= 80 ? '#22c55e' : pctValue >= 60 ? '#eab308' : '#ef4444';
   const circumference = 2 * Math.PI * 42;
 
@@ -233,7 +227,7 @@ export default function DashboardPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="animate-fade-in-up">
           <h1 className="text-2xl font-bold tracking-tight text-foreground">
-            {esBrigadier ? 'Panel de Control' : 'Mi Asistencia'}
+            Mi Asistencia
           </h1>
           <p className="mt-0.5 text-sm text-muted-foreground capitalize">
             {dateStr}
@@ -265,91 +259,74 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {esBrigadier && !dataLoaded ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Card key={i} className="shadow-card overflow-hidden">
-              <CardContent className="p-5">
-                <div className="skeleton skeleton-sm mb-3" />
-                <div className="skeleton skeleton-lg" />
+      <Card className="shadow-card animate-fade-in-up">
+        <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary-dark text-primary-foreground">
+              <User className="h-6 w-6" />
+            </div>
+            <div>
+              <p className="text-lg font-bold tracking-tight text-foreground">{user?.nombres} {user?.apellidos}</p>
+              <p className="text-sm capitalize text-muted-foreground">{user?.rol === 'brigadier' ? 'Brigadier' : 'Estudiante'}</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <div className="rounded-xl border bg-card px-4 py-2">
+              <p className="text-xs text-muted-foreground">DNI</p>
+              <p className="font-semibold text-foreground tabular-nums">{user?.dni}</p>
+            </div>
+            <div className="rounded-xl border bg-card px-4 py-2">
+              <p className="text-xs text-muted-foreground">Grado</p>
+              <p className="font-semibold text-foreground">{miAlumno?.grado || '—'}</p>
+            </div>
+            <div className="rounded-xl border bg-card px-4 py-2">
+              <p className="text-xs text-muted-foreground">Sección</p>
+              <p className="font-semibold text-foreground">{miAlumno?.seccion || '—'}</p>
+            </div>
+            <div className="rounded-xl border bg-card px-4 py-2">
+              <p className="text-xs text-muted-foreground">Código QR</p>
+              <p className="font-semibold text-foreground flex items-center gap-1">
+                <GraduationCap className="h-4 w-4 text-primary" />
+                {user?.uuid_qr ? 'Activo' : '—'}
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {[
+          { label: 'Presentes', value: presentes, icon: CheckCircle2, color: 'text-green-600', bg: 'bg-green-100' },
+          { label: 'Tardanzas', value: tardanzas, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-100' },
+          { label: 'Faltas Justificadas', value: faltasJustificadas, icon: FileWarning, color: 'text-sky-600', bg: 'bg-sky-100' },
+          { label: 'Faltas Injustificadas', value: faltasInjustificadas, icon: XCircle, color: 'text-red-600', bg: 'bg-red-100' },
+        ].map((stat, index) => {
+          const Icon = stat.icon;
+          return (
+            <Card
+              key={stat.label}
+              className="card-hover-border animate-fade-in-up shadow-card overflow-hidden"
+              style={{ animationDelay: `${index * 60}ms` }}
+            >
+              <CardContent className="relative p-5">
+                <div className="flex items-start justify-between">
+                  <AnimatedValue value={stat.value} label={stat.label} />
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${stat.bg}`}>
+                    <Icon className={`h-5 w-5 ${stat.color}`} />
+                  </div>
+                </div>
               </CardContent>
             </Card>
-          ))}
-        </div>
-      ) : esBrigadier ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-          {[
-            { label: 'Total Estudiantes', value: data?.total_estudiantes ?? 0, icon: Users, color: 'text-blue-600', bg: 'bg-blue-100', gradient: 'from-blue-500/10' },
-            { label: 'Presentes', value: data?.presentes_hoy ?? 0, icon: CheckCircle2, color: 'text-green-600', bg: 'bg-green-100', gradient: 'from-green-500/10' },
-            { label: 'Tardanzas', value: data?.tardanzas_hoy ?? 0, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-100', gradient: 'from-amber-500/10' },
-            { label: 'Faltas Justificadas', value: data?.faltas_justificadas_hoy ?? 0, icon: FileWarning, color: 'text-sky-600', bg: 'bg-sky-100', gradient: 'from-sky-500/10' },
-            { label: 'Faltas Injustificadas', value: data?.faltas_injustificadas_hoy ?? 0, icon: XCircle, color: 'text-red-600', bg: 'bg-red-100', gradient: 'from-red-500/10' },
-            { label: 'Brigadieres', value: data?.brigadieres_conectados ?? 0, icon: ShieldCheck, color: 'text-purple-600', bg: 'bg-purple-100', gradient: 'from-purple-500/10', live: true },
-          ].map((stat, index) => {
-            const Icon = stat.icon;
-            const isLive = 'live' in stat;
-            return (
-              <Card
-                key={stat.label}
-                className="card-hover-border animate-fade-in-up shadow-card overflow-hidden"
-                style={{ animationDelay: `${index * 60}ms` }}
-              >
-                <CardContent className="relative p-5">
-                  <div className={`absolute inset-0 bg-gradient-to-br ${stat.gradient} to-transparent opacity-60`} />
-                  <div className="relative flex items-start justify-between">
-                    <AnimatedValue value={stat.value} label={stat.label} />
-                    <div className="flex flex-col items-end gap-2">
-                      <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${stat.bg}`}>
-                        <Icon className={`h-5 w-5 ${stat.color}`} />
-                      </div>
-                      {isLive && (
-                        <span className="inline-flex items-center gap-1.5 text-[11px] text-green-600 font-medium">
-                          <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500 animate-live-pulse" />
-                          En vivo
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            { label: 'Presentes', value: presentes, icon: CheckCircle2, color: 'text-green-600', bg: 'bg-green-100' },
-            { label: 'Tardanzas', value: tardanzas, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-100' },
-            { label: 'Faltas Justificadas', value: faltasJustificadas, icon: FileWarning, color: 'text-sky-600', bg: 'bg-sky-100' },
-            { label: 'Faltas Injustificadas', value: faltasInjustificadas, icon: XCircle, color: 'text-red-600', bg: 'bg-red-100' },
-          ].map((stat, index) => {
-            const Icon = stat.icon;
-            return (
-              <Card
-                key={stat.label}
-                className="card-hover-border animate-fade-in-up shadow-card overflow-hidden"
-                style={{ animationDelay: `${index * 60}ms` }}
-              >
-                <CardContent className="relative p-5">
-                  <div className="flex items-start justify-between">
-                    <AnimatedValue value={stat.value} label={stat.label} />
-                    <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${stat.bg}`}>
-                      <Icon className={`h-5 w-5 ${stat.color}`} />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      )}
+          );
+        })}
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="shadow-card col-span-2 lg:col-span-1">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-lg font-semibold">
               <Percent className="h-5 w-5 text-primary" />
-              {esBrigadier ? 'Asistencia General' : 'Mi Asistencia'}
+              Mi Asistencia
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -380,21 +357,21 @@ export default function DashboardPage() {
                   <div className="h-2.5 w-2.5 rounded-full bg-green-500" />
                   <div>
                     <p className="text-xs text-green-700/70">Presentes</p>
-                    <p className="text-sm font-semibold text-green-800">{esBrigadier ? data?.presentes_hoy ?? 0 : presentes}</p>
+                    <p className="text-sm font-semibold text-green-800">{presentes}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 rounded-xl bg-amber-50/80 px-4 py-3 ring-1 ring-amber-200/50">
                   <div className="h-2.5 w-2.5 rounded-full bg-amber-500" />
                   <div>
                     <p className="text-xs text-amber-700/70">Tardanzas</p>
-                    <p className="text-sm font-semibold text-amber-800">{esBrigadier ? data?.tardanzas_hoy ?? 0 : tardanzas}</p>
+                    <p className="text-sm font-semibold text-amber-800">{tardanzas}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 rounded-xl bg-red-50/80 px-4 py-3 ring-1 ring-red-200/50">
                   <div className="h-2.5 w-2.5 rounded-full bg-red-500" />
                   <div>
                     <p className="text-xs text-red-700/70">Faltas</p>
-                    <p className="text-sm font-semibold text-red-800">{esBrigadier ? (data?.faltas_justificadas_hoy ?? 0) + (data?.faltas_injustificadas_hoy ?? 0) : faltasJustificadas + faltasInjustificadas}</p>
+                    <p className="text-sm font-semibold text-red-800">{faltasJustificadas + faltasInjustificadas}</p>
                   </div>
                 </div>
               </div>
@@ -407,7 +384,7 @@ export default function DashboardPage() {
             <CardTitle className="flex items-center gap-2 text-lg font-semibold">
               <Activity className="h-5 w-5 text-primary" />
               <span className="flex items-center gap-2">
-                {esBrigadier ? 'Registros de Hoy' : 'Mis Registros Hoy'}
+                Mis Registros Hoy
                 {todayRegistros.length > 0 && (
                   <span className="inline-flex items-center gap-1.5 text-xs font-normal text-green-600">
                     <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500 animate-live-pulse" />
@@ -439,19 +416,9 @@ export default function DashboardPage() {
                     <div className="flex items-center gap-3 min-w-0 flex-1">
                       <div className={`h-2 w-2 shrink-0 rounded-full ${estadoDot[r.estado] || 'bg-gray-300'}`} />
                       <div className="min-w-0">
-                        {esBrigadier && (
-                          <p className="truncate text-sm font-medium text-foreground">
-                            {r.alumno?.nombres} {r.alumno?.apellidos}
-                          </p>
-                        )}
-                        {!esBrigadier && (
-                          <p className="text-sm font-medium text-foreground">
-                            {getEstadoLabel(r.estado)}
-                          </p>
-                        )}
-                        {esBrigadier && (
-                          <p className="text-xs text-muted-foreground">DNI: {r.alumno?.dni}</p>
-                        )}
+                        <p className="text-sm font-medium text-foreground">
+                          {getEstadoLabel(r.estado)}
+                        </p>
                       </div>
                     </div>
                     <div className="ml-3 flex items-center gap-3">
@@ -476,8 +443,7 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {!esBrigadier && (
-        <Card className="shadow-card">
+      <Card className="shadow-card">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-lg font-semibold">
               <Calendar className="h-5 w-5 text-primary" />
@@ -556,7 +522,6 @@ export default function DashboardPage() {
             </div>
           </CardContent>
         </Card>
-      )}
 
       <Dialog open={diaOpen} onOpenChange={setDiaOpen}>
         <DialogContent className="sm:max-w-sm">

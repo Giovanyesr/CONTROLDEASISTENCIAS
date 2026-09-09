@@ -10,7 +10,7 @@ const items = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['director', 'tutor', 'brigadier', 'alumno'] },
   { href: '/escaner', label: 'Escáner', icon: QrCode, roles: ['brigadier'] },
   { href: '/estudiantes', label: 'Estudiantes', icon: Users, roles: ['admin', 'director', 'tutor', 'brigadier'] },
-  { href: '/historial', label: 'Historial', icon: History, roles: ['director', 'tutor', 'brigadier', 'alumno'] },
+  { href: '/historial', label: 'Historial', icon: History, roles: ['director', 'tutor', 'brigadier'] },
   { href: '/justificaciones', label: 'Justificar', icon: FileCheck, roles: ['admin', 'director', 'tutor', 'brigadier', 'alumno'] },
   { href: '/notificaciones', label: 'Notif.', icon: Bell, roles: ['admin', 'director', 'tutor', 'brigadier', 'alumno'] },
   { href: '/perfil', label: 'Perfil', icon: UserCircle, roles: ['admin', 'director', 'tutor', 'brigadier', 'alumno'] },

@@ -58,7 +58,7 @@ export default function JustificacionesPage() {
   const [reqSubiendo, setReqSubiendo] = useState(false);
 
   const esDirector = user?.rol === 'director';
-  const esAlumno = user?.rol === 'alumno';
+  const puedeSolicitar = user?.rol === 'alumno' || user?.rol === 'brigadier';
 
   const fetchItems = useCallback(async () => {
     setLoading(true);
@@ -73,7 +73,7 @@ export default function JustificacionesPage() {
         `)
         .order('created_at', { ascending: false });
 
-      if (esAlumno) query = query.eq('alumno_id', user?.id);
+      if (puedeSolicitar) query = query.eq('alumno_id', user?.id);
       else if (soloPendientes) query = query.eq('estado', 'pendiente');
 
       const { data } = await query;
@@ -81,7 +81,7 @@ export default function JustificacionesPage() {
     } catch {} finally {
       setLoading(false);
     }
-  }, [esAlumno, soloPendientes, user?.id, supabase]);
+  }, [puedeSolicitar, soloPendientes, user?.id, supabase]);
 
   useEffect(() => {
     if (!user) return;
@@ -89,7 +89,27 @@ export default function JustificacionesPage() {
   }, [user, fetchItems]);
 
   const cargarFaltas = async () => {
-    if (!esAlumno) return;
+    if (!puedeSolicitar) return;
+
+    const { data: noLaborables } = await supabase.from('dias_no_laborables').select('fecha');
+    const festivos = new Set((noLaborables || []).map((n: any) => n.fecha));
+
+    const diasHabiles = (fecha: string) => {
+      const start = new Date(fecha + 'T12:00:00');
+      const hoy = new Date();
+      hoy.setHours(12, 0, 0, 0);
+      const d = new Date(start);
+      d.setDate(d.getDate() + 1);
+      let count = 0;
+      while (d <= hoy) {
+        const dow = d.getDay();
+        const f = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        if (dow !== 0 && dow !== 6 && !festivos.has(f)) count++;
+        d.setDate(d.getDate() + 1);
+      }
+      return count;
+    };
+
     const { data: asis } = await supabase
       .from('asistencias')
       .select('id, fecha, hora')
@@ -104,7 +124,8 @@ export default function JustificacionesPage() {
       .eq('estado', 'pendiente');
 
     const pendIds = new Set((pend || []).map((p: any) => p.asistencia_id));
-    setFaltas((asis || []).filter((a: any) => !pendIds.has(a.id)));
+    const dentroDePlazo = (asis || []).filter((a: any) => diasHabiles(a.fecha) <= 5);
+    setFaltas(dentroDePlazo.filter((a: any) => !pendIds.has(a.id)));
   };
 
   const openNueva = async () => {
@@ -166,12 +187,12 @@ export default function JustificacionesPage() {
           <p className="mt-1 text-sm text-muted-foreground">
             {esDirector
               ? 'Revisa y resuelve las solicitudes de justificación de tus estudiantes.'
-              : esAlumno
-                ? 'Consulta y envía tus solicitudes de justificación.'
+              : puedeSolicitar
+                ? 'Consulta y envía tus solicitudes de justificación (máximo 5 días hábiles).'
                 : 'Consulta las solicitudes de justificación.'}
           </p>
         </div>
-        {esAlumno ? (
+        {puedeSolicitar ? (
           <Button onClick={openNueva} className="gap-2 rounded-lg self-start sm:self-auto">
             <Plus className="h-4 w-4" /> Nueva solicitud
           </Button>

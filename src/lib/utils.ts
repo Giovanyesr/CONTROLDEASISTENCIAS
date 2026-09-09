@@ -61,11 +61,13 @@ function timeToMinutes(t: string): number {
 }
 
 export function getPeruDate(): string {
-  const now = new Date();
-  const peruOffset = -5 * 60;
-  const localOffset = now.getTimezoneOffset();
-  const peruTime = new Date(now.getTime() + (localOffset + peruOffset) * 60000);
-  return peruTime.toISOString().split('T')[0];
+  const fmt = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Lima',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  return fmt.format(new Date());
 }
 
 export function calcularEstadoAsistencia(hora: string, intervalos?: IntervalosAsistencia): string {
