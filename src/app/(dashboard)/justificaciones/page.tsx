@@ -94,38 +94,41 @@ export default function JustificacionesPage() {
     const { data: noLaborables } = await supabase.from('dias_no_laborables').select('fecha');
     const festivos = new Set((noLaborables || []).map((n: any) => n.fecha));
 
-    const diasHabiles = (fecha: string) => {
-      const start = new Date(fecha + 'T12:00:00');
-      const hoy = new Date();
-      hoy.setHours(12, 0, 0, 0);
-      const d = new Date(start);
-      d.setDate(d.getDate() + 1);
-      let count = 0;
-      while (d <= hoy) {
-        const dow = d.getDay();
-        const f = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-        if (dow !== 0 && dow !== 6 && !festivos.has(f)) count++;
-        d.setDate(d.getDate() + 1);
-      }
-      return count;
-    };
+    // Últimos 5 días hábiles (laborables) hacia atrás
+    const hoy = new Date();
+    hoy.setHours(12, 0, 0, 0);
+    const dias: string[] = [];
+    const d = new Date(hoy);
+    while (dias.length < 5) {
+      const dow = d.getDay();
+      const f = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      if (dow !== 0 && dow !== 6 && !festivos.has(f)) dias.push(f);
+      d.setDate(d.getDate() - 1);
+    }
+    dias.reverse();
 
     const { data: asis } = await supabase
       .from('asistencias')
-      .select('id, fecha, hora')
-      .eq('alumno_id', user?.id)
-      .eq('estado', 'falta_injustificada')
-      .order('fecha', { ascending: false });
+      .select('id, fecha, hora, estado')
+      .eq('alumno_id', user?.id);
+    const porFecha = new Map((asis || []).map((a: any) => [a.fecha, a]));
 
     const { data: pend } = await supabase
       .from('justificaciones')
       .select('asistencia_id')
       .eq('alumno_id', user?.id)
       .eq('estado', 'pendiente');
+    const pendIds = new Set((pend || []).map((p: any) => p.asistencia_id).filter(Boolean));
 
-    const pendIds = new Set((pend || []).map((p: any) => p.asistencia_id));
-    const dentroDePlazo = (asis || []).filter((a: any) => diasHabiles(a.fecha) <= 5);
-    setFaltas(dentroDePlazo.filter((a: any) => !pendIds.has(a.id)));
+    const faltas: any[] = [];
+    for (const f of dias) {
+      const rec = porFecha.get(f);
+      // Si ya asistió (presente/tardanza/justificada), no es falta
+      if (rec && ['presente', 'tardanza', 'falta_justificada'].includes(rec.estado)) continue;
+      if (rec?.id && pendIds.has(rec.id)) continue;
+      faltas.push({ id: rec?.id || `fecha:${f}`, fecha: f, hora: rec?.hora || null });
+    }
+    setFaltas(faltas);
   };
 
   const openNueva = async () => {
@@ -337,9 +340,11 @@ export default function JustificacionesPage() {
               <Select value={reqAsistencia} onValueChange={setReqAsistencia}>
                 <SelectTrigger className="rounded-lg"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
                 <SelectContent>
-                  {faltas.length === 0 && <SelectItem value="__none" disabled>No tienes faltas por justificar</SelectItem>}
+                  {faltas.length === 0 && <SelectItem value="__none" disabled>No tienes faltas por justificar en los últimos 5 días</SelectItem>}
                   {faltas.map((f: any) => (
-                    <SelectItem key={f.id} value={f.id}>{f.fecha} · {f.hora?.slice(0, 5)}</SelectItem>
+                    <SelectItem key={f.id} value={f.id}>
+                      {new Date(f.fecha + 'T12:00:00').toLocaleDateString('es-PE', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>

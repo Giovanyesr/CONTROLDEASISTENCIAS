@@ -22,12 +22,49 @@ export async function POST(request: Request) {
     }
 
     const formData = await request.formData();
-    const asistencia_id = formData.get('asistencia_id') as string | null;
+    let asistencia_id = formData.get('asistencia_id') as string | null;
     const motivo = formData.get('motivo') as string | null;
     const file = formData.get('file') as File | null;
 
     if (!asistencia_id || !motivo?.trim()) {
       return NextResponse.json({ error: 'asistencia_id y motivo requeridos' }, { status: 400 });
+    }
+
+    const svc = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { cookies: { getAll: () => [], setAll: () => {} } }
+    );
+
+    // Si la falta es inferida (sin registro aún, id "fecha:YYYY-MM-DD"), crear el registro
+    if (asistencia_id.startsWith('fecha:')) {
+      const fecha = asistencia_id.replace('fecha:', '');
+      const { data: existente } = await svc
+        .from('asistencias')
+        .select('id')
+        .eq('alumno_id', user.id)
+        .eq('fecha', fecha)
+        .maybeSingle();
+
+      if (existente) {
+        asistencia_id = existente.id;
+      } else {
+        const { data: insertado, error: errIns } = await svc
+          .from('asistencias')
+          .insert({
+            alumno_id: user.id,
+            brigadier_id: user.id,
+            fecha,
+            hora: '00:00:00',
+            estado: 'falta_injustificada',
+          })
+          .select('id')
+          .single();
+        if (errIns || !insertado) {
+          return NextResponse.json({ error: 'No se pudo registrar la falta' }, { status: 500 });
+        }
+        asistencia_id = insertado.id;
+      }
     }
 
     const { data, error } = await supabase.rpc('solicitar_justificacion', {
@@ -48,11 +85,6 @@ export async function POST(request: Request) {
         .maybeSingle();
 
       if (justs) {
-        const svc = createServerClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL!,
-          process.env.SUPABASE_SERVICE_ROLE_KEY!,
-          { cookies: { getAll: () => [], setAll: () => {} } }
-        );
         const ext = file.name.split('.').pop();
         const fileName = `evidencia-${justs.id}-${Date.now()}.${ext}`;
         const { error: uploadError } = await svc.storage
