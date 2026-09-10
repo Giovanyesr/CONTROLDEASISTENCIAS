@@ -29,7 +29,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { formatTime, getPeruDate, getEstadoLabel } from '@/lib/utils';
+import { formatTime, getPeruDate, getPeruCalendarDate, getEstadoLabel } from '@/lib/utils';
 import { playSuccessBeep } from '@/lib/beep';
 import toast from 'react-hot-toast';
 
@@ -96,10 +96,7 @@ export default function DashboardPage() {
     return true;
   };
 
-  const now = new Date();
-  const peruOffset = -5 * 60;
-  const localOffset = now.getTimezoneOffset();
-  const peruNow = new Date(now.getTime() + (localOffset + peruOffset) * 60000);
+  const peruNow = getPeruCalendarDate();
   const añoActual = peruNow.getFullYear();
   const mesActual = peruNow.getMonth();
   const diasEnMes = new Date(añoActual, mesActual + 1, 0).getDate();
@@ -136,7 +133,7 @@ export default function DashboardPage() {
           .eq('perfil_id', user.id)
           .single();
         if (alumno?.created_at) {
-          setFechaRegistro(new Date(alumno.created_at).toISOString().split('T')[0]);
+          setFechaRegistro(getPeruDate(alumno.created_at));
         }
         setMiAlumno(alumno || null);
 
@@ -218,7 +215,7 @@ export default function DashboardPage() {
   const pctColor = pctValue >= 80 ? '#22c55e' : pctValue >= 60 ? '#eab308' : '#ef4444';
   const circumference = 2 * Math.PI * 42;
 
-  const dateStr = new Date().toLocaleDateString('es-PE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const dateStr = new Intl.DateTimeFormat('es-PE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'America/Lima' }).format(new Date());
 
   const todayRegistros = ultimosRegistros.filter(r => r.fecha === getPeruDate());
 
@@ -463,8 +460,8 @@ export default function DashboardPage() {
                 const fecha = `${añoActual}-${String(mesActual + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
                 const rawEstado = mesAsistencias[fecha];
                 const noLaborable = !esLaborable(fecha);
-                const esFuturo = fecha > peruNow.toISOString().split('T')[0];
-                const hoy = fecha === peruNow.toISOString().split('T')[0];
+                const esFuturo = fecha > getPeruDate();
+                const hoy = fecha === getPeruDate();
                 const esPasadoLaborable = !esFuturo && !noLaborable;
                 const antesDeRegistro = fechaRegistro && fecha < fechaRegistro;
                 const estado = rawEstado || (esPasadoLaborable && !antesDeRegistro ? 'falta_injustificada' : undefined);

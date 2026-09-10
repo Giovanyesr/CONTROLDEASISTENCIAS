@@ -8,7 +8,8 @@ export function cn(...inputs: ClassValue[]) {
 export function formatDate(date: string | Date): string {
   return new Intl.DateTimeFormat('es-PE', {
     dateStyle: 'long',
-  }).format(new Date(date));
+    timeZone: 'America/Lima',
+  }).format(toDateValue(date));
 }
 
 export function formatTime(time: string): string {
@@ -20,6 +21,7 @@ export function formatDateTime(date: string): string {
   return new Intl.DateTimeFormat('es-PE', {
     dateStyle: 'medium',
     timeStyle: 'short',
+    timeZone: 'America/Lima',
   }).format(new Date(date));
 }
 
@@ -60,14 +62,28 @@ function timeToMinutes(t: string): number {
   return h * 60 + m;
 }
 
-export function getPeruDate(): string {
+function toDateValue(date: string | Date): Date {
+  return typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)
+    ? new Date(`${date}T12:00:00`)
+    : new Date(date);
+}
+
+export function getPeruDate(date?: string | Date): string {
   const fmt = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'America/Lima',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
   });
-  return fmt.format(new Date());
+  return fmt.format(date ? toDateValue(date) : new Date());
+}
+
+export function getPeruCalendarDate(): Date {
+  return new Date(`${getPeruDate()}T12:00:00`);
+}
+
+export function dateKey(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
 export function calcularEstadoAsistencia(hora: string, intervalos?: IntervalosAsistencia): string {

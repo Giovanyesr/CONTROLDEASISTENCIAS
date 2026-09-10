@@ -20,6 +20,7 @@ import {
   Loader2, CheckCircle2, XCircle, Clock, Upload, FileText, Plus, Search, Inbox, ShieldAlert, Eye,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { getPeruCalendarDate } from '@/lib/utils';
 
 const estadoBadge = (estado?: string) => {
   const cfg: Record<string, { label: string; cls: string; dot: string }> = {
@@ -95,8 +96,7 @@ export default function JustificacionesPage() {
     const festivos = new Set((noLaborables || []).map((n: any) => n.fecha));
 
     // Últimos 5 días hábiles (laborables) hacia atrás
-    const hoy = new Date();
-    hoy.setHours(12, 0, 0, 0);
+    const hoy = getPeruCalendarDate();
     const dias: string[] = [];
     const d = new Date(hoy);
     while (dias.length < 5) {

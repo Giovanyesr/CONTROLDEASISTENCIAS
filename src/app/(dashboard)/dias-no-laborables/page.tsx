@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dialog';
 import { CalendarOff, Loader2, Plus, Trash2, CalendarDays, CalendarRange } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { dateKey } from '@/lib/utils';
 
 export default function DiasNoLaborablesPage() {
   const [dias, setDias] = useState<any[]>([]);
@@ -51,7 +52,7 @@ export default function DiasNoLaborablesPage() {
         const inicio = new Date(form.fecha + 'T12:00:00');
         const fin = new Date(form.fecha_fin + 'T12:00:00');
         for (let d = new Date(inicio); d <= fin; d.setDate(d.getDate() + 1)) {
-          fechas.push(d.toISOString().split('T')[0]);
+          fechas.push(dateKey(d));
         }
       }
       const registros = fechas.map(f => ({ fecha: f, tipo: form.tipo, descripcion: form.descripcion }));

@@ -15,6 +15,7 @@ import {
   IdCard, Lock
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { getPeruCalendarDate } from '@/lib/utils';
 
 export default function LoginPage() {
   const [dni, setDni] = useState('');
@@ -131,7 +132,7 @@ export default function LoginPage() {
 
         {/* Footer */}
         <div className="relative z-10 flex items-center justify-between text-[12px] text-white/40 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300 fill-mode-both border-t border-white/10 pt-6">
-          <p>&copy; {new Date().getFullYear()} Todos los derechos reservados.</p>
+          <p>&copy; {getPeruCalendarDate().getFullYear()} Todos los derechos reservados.</p>
           <div className="flex items-center gap-2">
             <ShieldCheck className="h-4 w-4 text-[#D4A853]/60" />
             <span>Sistema Seguro v2.0</span>
@@ -269,4 +270,3 @@ export default function LoginPage() {
     </div>
   );
 }
-

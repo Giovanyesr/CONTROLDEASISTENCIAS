@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, ChevronLeft, ChevronRight, History, Loader2, FileDown, FileText, Calendar, Clock, UserCheck, CheckCircle2, XCircle, FileWarning, ShieldCheck } from 'lucide-react';
-import { getEstadoLabel, formatTime } from '@/lib/utils';
+import { getEstadoLabel, formatTime, getPeruDate, getPeruCalendarDate } from '@/lib/utils';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
@@ -26,8 +26,8 @@ export default function HistorialPage() {
   const [search, setSearch] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('');
   const [filtroGrado, setFiltroGrado] = useState('');
-  const [filtroMes, setFiltroMes] = useState(new Date().getMonth().toString());
-  const [filtroAno, setFiltroAno] = useState(new Date().getFullYear().toString());
+  const [filtroMes, setFiltroMes] = useState(getPeruCalendarDate().getMonth().toString());
+  const [filtroAno, setFiltroAno] = useState(getPeruCalendarDate().getFullYear().toString());
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
   const [total, setTotal] = useState(0);
@@ -64,7 +64,7 @@ export default function HistorialPage() {
           .eq('perfil_id', user.id)
           .single();
         if (alumno?.created_at) {
-          setFechaRegistro(new Date(alumno.created_at).toISOString().split('T')[0]);
+          setFechaRegistro(getPeruDate(alumno.created_at));
         }
       } catch { /* ignore */ }
     };
@@ -81,10 +81,7 @@ export default function HistorialPage() {
 
   const esBrigadier = user?.rol === 'brigadier';
 
-  const now = new Date();
-  const peruOffset = -5 * 60;
-  const localOffset = now.getTimezoneOffset();
-  const peruNow = new Date(now.getTime() + (localOffset + peruOffset) * 60000);
+  const peruNow = getPeruCalendarDate();
   const añoActual = peruNow.getFullYear();
   const mesActual = peruNow.getMonth();
   const diasEnMes = new Date(parseInt(filtroAno), parseInt(filtroMes) + 1, 0).getDate();
@@ -236,7 +233,7 @@ export default function HistorialPage() {
     const mes = parseInt(filtroMes);
     const ano = parseInt(filtroAno);
     const dias = new Date(ano, mes + 1, 0).getDate();
-    const hoyStr = peruNow.toISOString().split('T')[0];
+    const hoyStr = getPeruDate();
     for (let d = 1; d <= dias; d++) {
       const fecha = `${ano}-${String(mes + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
       if (!esLaborable(fecha)) continue;
@@ -267,7 +264,7 @@ export default function HistorialPage() {
       body: tableData,
       startY: 25,
     });
-    doc.save(`historial-${new Date().toISOString().split('T')[0]}.pdf`);
+    doc.save(`historial-${getPeruDate()}.pdf`);
     toast.success('PDF exportado');
   }, [buildExportRows]);
 
@@ -277,14 +274,14 @@ export default function HistorialPage() {
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Historial');
-    XLSX.writeFile(wb, `historial-${new Date().toISOString().split('T')[0]}.xlsx`);
+    XLSX.writeFile(wb, `historial-${getPeruDate()}.xlsx`);
     toast.success('Excel exportado');
   }, [buildExportRows]);
 
   const totalPages = Math.ceil(total / pageSize);
   const colSpan = esBrigadier ? 6 : 4;
   const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Setiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-  const anos = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
+  const anos = Array.from({ length: 5 }, (_, i) => getPeruCalendarDate().getFullYear() - i);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -388,8 +385,8 @@ export default function HistorialPage() {
                   const fecha = `${filtroAno}-${String(parseInt(filtroMes) + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
                   const registro = mesAsistencias[fecha];
                   const noLaborable = !esLaborable(fecha);
-                  const esFuturo = fecha > peruNow.toISOString().split('T')[0];
-                  const hoy = fecha === peruNow.toISOString().split('T')[0];
+                  const esFuturo = fecha > getPeruDate();
+                  const hoy = fecha === getPeruDate();
                   const esPasadoLaborable = !esFuturo && !noLaborable;
                   const antesDeRegistro = fechaRegistro && fecha < fechaRegistro;
                   const estado = registro?.estado || (esPasadoLaborable && !antesDeRegistro ? 'falta_injustificada' : undefined);

@@ -5,6 +5,7 @@
 -- ============================================================
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+SET TIME ZONE 'America/Lima';
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- ============================================================
@@ -432,7 +433,7 @@ BEGIN
     )
   );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET timezone = 'America/Lima';
 
 -- ============================================================
 -- FUNCIÓN: justificar asistencia
@@ -675,6 +676,7 @@ CREATE OR REPLACE FUNCTION public.dias_habiles_desde(p_fecha DATE)
 RETURNS INTEGER
 LANGUAGE sql
 STABLE
+SET timezone = 'America/Lima'
 AS $$
   SELECT count(*)::int
   FROM generate_series(p_fecha::timestamp + interval '1 day', CURRENT_DATE::timestamp, interval '1 day') d

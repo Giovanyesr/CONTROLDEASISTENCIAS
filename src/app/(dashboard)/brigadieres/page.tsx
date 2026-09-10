@@ -12,6 +12,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import { ShieldCheck, Activity, BarChart3, Loader2, Users, CalendarDays, Smartphone, Hash, User, Mail } from 'lucide-react';
+import { formatDate } from '@/lib/utils';
 
 export default function BrigadieresPage() {
   const [brigadieres, setBrigadieres] = useState<any[]>([]);
@@ -230,7 +231,7 @@ export default function BrigadieresPage() {
                         <CalendarDays className="h-3.5 w-3.5" />
                         Registrado
                       </div>
-                      <p className="text-sm text-foreground">{detailProfile?.created_at ? new Date(detailProfile.created_at + 'Z').toLocaleDateString('es-PE', { year: 'numeric', month: 'long', day: 'numeric' }) : '—'}</p>
+                      <p className="text-sm text-foreground">{detailProfile?.created_at ? formatDate(detailProfile.created_at) : '—'}</p>
                     </div>
                     <div className="rounded-xl border border-border bg-muted/30 p-3">
                       <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">

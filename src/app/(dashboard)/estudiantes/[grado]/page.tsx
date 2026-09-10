@@ -25,6 +25,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import toast from 'react-hot-toast';
+import { getPeruDate, getPeruCalendarDate } from '@/lib/utils';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
@@ -52,10 +53,7 @@ const estadoBadge: Record<string, string> = {
   falta_justificada: 'outline', falta_injustificada: 'destructive',
 };
 
-const now = new Date();
-const peruOffset = -5 * 60;
-const localOffset = now.getTimezoneOffset();
-const peruNow = new Date(now.getTime() + (localOffset + peruOffset) * 60000);
+const peruNow = getPeruCalendarDate();
 
 export default function GradoPage() {
   const params = useParams();
@@ -157,7 +155,7 @@ export default function GradoPage() {
     const fechaRegistroMap: Record<string, string> = {};
     filtered.forEach((e: any) => {
       if (e.alumno?.created_at) {
-        fechaRegistroMap[e.id] = new Date(e.alumno.created_at).toISOString().split('T')[0];
+        fechaRegistroMap[e.id] = getPeruDate(e.alumno.created_at);
       }
     });
 
@@ -175,7 +173,7 @@ export default function GradoPage() {
       });
 
       const last5Days: string[] = [];
-      const todayStr = peruNow.toISOString().split('T')[0];
+      const todayStr = getPeruDate();
       let cursor = new Date(peruNow);
       while (last5Days.length < 5) {
         const d = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}-${String(cursor.getDate()).padStart(2, '0')}`;
@@ -268,7 +266,7 @@ export default function GradoPage() {
       for (let d = 1; d <= diasEnMes; d++) {
         const fecha = `${ano}-${String(mes + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
         if (!esLaborable(fecha)) continue;
-        if (fecha > peruNow.toISOString().split('T')[0]) continue;
+        if (fecha > getPeruDate()) continue;
         if (fechaRegistro && fecha < fechaRegistro) continue;
 
         const estado = map[fecha] || 'falta_injustificada';
@@ -295,7 +293,7 @@ export default function GradoPage() {
     setHistorialMes(peruNow.getMonth());
     setHistorialAno(peruNow.getFullYear());
     setHistorialOpen(true);
-    await fetchMesAsistencias(est.id, peruNow.getMonth(), peruNow.getFullYear(), est.alumno?.created_at ? new Date(est.alumno.created_at).toISOString().split('T')[0] : undefined);
+    await fetchMesAsistencias(est.id, peruNow.getMonth(), peruNow.getFullYear(), est.alumno?.created_at ? getPeruDate(est.alumno.created_at) : undefined);
   };
 
   const cambiarMes = async (delta: number) => {
@@ -303,14 +301,14 @@ export default function GradoPage() {
     if (nuevoMes < 0) {
       setHistorialAno(historialAno - 1);
       setHistorialMes(11);
-      if (selectedStudent) await fetchMesAsistencias(selectedStudent.id, 11, historialAno - 1, selectedStudent.alumno?.created_at ? new Date(selectedStudent.alumno.created_at).toISOString().split('T')[0] : undefined);
+      if (selectedStudent) await fetchMesAsistencias(selectedStudent.id, 11, historialAno - 1, selectedStudent.alumno?.created_at ? getPeruDate(selectedStudent.alumno.created_at) : undefined);
     } else if (nuevoMes > 11) {
       setHistorialAno(historialAno + 1);
       setHistorialMes(0);
-      if (selectedStudent) await fetchMesAsistencias(selectedStudent.id, 0, historialAno + 1, selectedStudent.alumno?.created_at ? new Date(selectedStudent.alumno.created_at).toISOString().split('T')[0] : undefined);
+      if (selectedStudent) await fetchMesAsistencias(selectedStudent.id, 0, historialAno + 1, selectedStudent.alumno?.created_at ? getPeruDate(selectedStudent.alumno.created_at) : undefined);
     } else {
       setHistorialMes(nuevoMes);
-      if (selectedStudent) await fetchMesAsistencias(selectedStudent.id, nuevoMes, historialAno, selectedStudent.alumno?.created_at ? new Date(selectedStudent.alumno.created_at).toISOString().split('T')[0] : undefined);
+      if (selectedStudent) await fetchMesAsistencias(selectedStudent.id, nuevoMes, historialAno, selectedStudent.alumno?.created_at ? getPeruDate(selectedStudent.alumno.created_at) : undefined);
     }
   };
 
@@ -862,9 +860,9 @@ export default function GradoPage() {
                     const fecha = `${historialAno}-${String(historialMes + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
                     const rawEstado = mesAsistencias[fecha];
                     const noLaborable = !esLaborable(fecha);
-                    const esFuturo = fecha > peruNow.toISOString().split('T')[0];
+                    const esFuturo = fecha > getPeruDate();
                     const esPasadoLaborable = !esFuturo && !noLaborable;
-                    const fechaRegistroEst = selectedStudent?.alumno?.created_at ? new Date(selectedStudent.alumno.created_at).toISOString().split('T')[0] : null;
+                                const fechaRegistroEst = selectedStudent?.alumno?.created_at ? getPeruDate(selectedStudent.alumno.created_at) : null;
                     const antesDeRegistro = fechaRegistroEst && fecha < fechaRegistroEst;
                     const estado = rawEstado || (esPasadoLaborable && !antesDeRegistro ? 'falta_injustificada' : undefined);
                     const clickable = !!estado;

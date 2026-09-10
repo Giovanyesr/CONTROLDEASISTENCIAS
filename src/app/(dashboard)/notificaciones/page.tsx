@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Loader2, Bell, BellOff, Inbox, CheckCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { formatDateTime } from '@/lib/utils';
 
 export default function NotificacionesPage() {
   const { user } = useAuth();
@@ -101,7 +102,7 @@ export default function NotificacionesPage() {
                   </div>
                   <p className="mt-0.5 text-sm text-muted-foreground">{n.mensaje}</p>
                   <p className="mt-1 text-xs text-muted-foreground/60">
-                    {new Date(n.created_at).toLocaleString('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                    {formatDateTime(n.created_at)}
                   </p>
                 </div>
               </button>
