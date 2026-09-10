@@ -78,6 +78,7 @@ export default function DashboardPage() {
 
   const esBrigadier = user?.rol === 'brigadier';
   const esEstudiante = user?.rol === 'alumno' || user?.rol === 'brigadier';
+  const esDirector = user?.rol === 'director';
 
   const [mesAsistencias, setMesAsistencias] = useState<Record<string, string>>({});
   const [diaSeleccionado, setDiaSeleccionado] = useState<{ fecha: string; estado?: string; hora?: string; brigadier_nombre?: string } | null>(null);
@@ -85,6 +86,7 @@ export default function DashboardPage() {
   const [cerrandoAsistencia, setCerrandoAsistencia] = useState(false);
   const [confirmCerrarOpen, setConfirmCerrarOpen] = useState(false);
   const [fechaRegistro, setFechaRegistro] = useState<string | null>(null);
+  const [institucional, setInstitucional] = useState<any>(null);
 
   const noLaborablesRef = useRef<Set<string>>(new Set());
 
@@ -126,6 +128,28 @@ export default function DashboardPage() {
     fetchDias();
 
     const cargarDashboard = async () => {
+      if (esDirector) {
+        const hoy = getPeruDate();
+        const [{ data: perfiles }, { data: asistencias }] = await Promise.all([
+          supabase.from('perfiles').select('id, rol, estado').eq('estado', 'activo'),
+          supabase.from('asistencias').select(`id, estado, hora, alumno:perfiles!asistencias_alumno_id_fkey(nombres, apellidos, dni)`).eq('fecha', hoy).order('created_at', { ascending: false }),
+        ]);
+        const activos = perfiles || [];
+        const registros = asistencias || [];
+        const contar = (estado: string) => registros.filter(r => r.estado === estado).length;
+        setInstitucional({
+          estudiantes: activos.filter(p => p.rol === 'alumno').length,
+          personal: activos.filter(p => ['admin', 'director', 'tutor', 'brigadier'].includes(p.rol)).length,
+          registrados: registros.length,
+          presentes: contar('presente'),
+          tardanzas: contar('tardanza'),
+          justificadas: contar('falta_justificada'),
+          injustificadas: contar('falta_injustificada'),
+          recientes: registros.slice(0, 10),
+        });
+        return;
+      }
+
       if (esEstudiante && user?.id) {
         const { data: alumno } = await supabase
           .from('alumnos')
@@ -185,7 +209,7 @@ export default function DashboardPage() {
       .subscribe();
 
     return () => { supabase.removeChannel(canal); };
-  }, [user]);
+  }, [user, esDirector]);
 
   const statsMap = Object.fromEntries((misStats ?? []).map((s: any) => [s.fecha, s.estado]));
   const hoyStr = getPeruDate();
@@ -217,6 +241,61 @@ export default function DashboardPage() {
   const circumference = 2 * Math.PI * 42;
 
   const dateStr = new Intl.DateTimeFormat('es-PE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'America/Lima' }).format(new Date());
+
+  if (esDirector) {
+    const resumen = institucional || { estudiantes: 0, personal: 0, registrados: 0, presentes: 0, tardanzas: 0, justificadas: 0, injustificadas: 0, recientes: [] };
+    const cobertura = resumen.estudiantes > 0 ? Math.round((resumen.registrados / resumen.estudiantes) * 100) : 0;
+    const asistencia = resumen.estudiantes > 0 ? Math.round(((resumen.presentes + resumen.tardanzas) / resumen.estudiantes) * 100) : 0;
+    const statsInstitucionales = [
+      { label: 'Estudiantes activos', value: resumen.estudiantes, icon: Users, color: 'text-sky-600', bg: 'bg-sky-100' },
+      { label: 'Personal activo', value: resumen.personal, icon: ShieldCheck, color: 'text-blue-600', bg: 'bg-blue-100' },
+      { label: 'Presentes hoy', value: resumen.presentes, icon: CheckCircle2, color: 'text-green-600', bg: 'bg-green-100' },
+      { label: 'Tardanzas hoy', value: resumen.tardanzas, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-100' },
+      { label: 'Faltas justificadas', value: resumen.justificadas, icon: FileWarning, color: 'text-sky-600', bg: 'bg-sky-100' },
+      { label: 'Faltas injustificadas', value: resumen.injustificadas, icon: XCircle, color: 'text-red-600', bg: 'bg-red-100' },
+    ];
+
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-sm font-medium uppercase tracking-wider text-primary">Gestión institucional</p>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">Panel del Director</h1>
+            <p className="mt-1 text-sm capitalize text-muted-foreground">Resumen general de la institución · {dateStr}</p>
+          </div>
+          <Badge variant="outline" className="w-fit rounded-lg px-3 py-1.5 text-blue-700">Vista institucional</Badge>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {statsInstitucionales.map((stat) => {
+            const Icon = stat.icon;
+            return <Card key={stat.label} className="overflow-hidden shadow-card"><CardContent className="flex items-center justify-between p-5"><div><p className="text-2xl font-bold text-foreground">{stat.value}</p><p className="text-xs font-medium text-muted-foreground">{stat.label}</p></div><div className={`flex h-11 w-11 items-center justify-center rounded-xl ${stat.bg}`}><Icon className={`h-5 w-5 ${stat.color}`} /></div></CardContent></Card>;
+          })}
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Card className="shadow-card">
+            <CardHeader><CardTitle className="flex items-center gap-2 text-lg"><Activity className="h-5 w-5 text-primary" />Indicadores de hoy</CardTitle></CardHeader>
+            <CardContent className="space-y-5">
+              <div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">Asistencia efectiva</span><span className="text-2xl font-bold text-foreground">{asistencia}%</span></div>
+              <div className="h-3 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-green-500 transition-all" style={{ width: `${Math.min(asistencia, 100)}%` }} /></div>
+              <div className="grid grid-cols-2 gap-3 text-sm"><div className="rounded-xl bg-primary/5 p-3"><p className="text-muted-foreground">Registros realizados</p><p className="mt-1 font-bold">{resumen.registrados}</p></div><div className="rounded-xl bg-muted/60 p-3"><p className="text-muted-foreground">Cobertura del control</p><p className="mt-1 font-bold">{cobertura}%</p></div></div>
+              <p className="text-xs text-muted-foreground">La asistencia efectiva considera presentes y tardanzas sobre los estudiantes activos.</p>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-card">
+            <CardHeader><CardTitle className="flex items-center gap-2 text-lg"><Activity className="h-5 w-5 text-primary" />Últimos registros de hoy</CardTitle></CardHeader>
+            <CardContent className="space-y-2">
+              {resumen.recientes.length === 0 ? <p className="py-8 text-center text-sm text-muted-foreground">Todavía no hay registros de asistencia hoy.</p> : resumen.recientes.map((r: any) => (
+                <div key={r.id} className="flex items-center justify-between rounded-xl border p-3"><div className="min-w-0"><p className="truncate text-sm font-medium">{r.alumno?.nombres} {r.alumno?.apellidos}</p><p className="text-xs text-muted-foreground">DNI {r.alumno?.dni} · {r.hora?.slice(0, 5)}</p></div><Badge variant={r.estado === 'presente' ? 'default' : r.estado === 'tardanza' ? 'secondary' : 'destructive'}>{getEstadoLabel(r.estado)}</Badge></div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   const todayRegistros = ultimosRegistros.filter(r => r.fecha === getPeruDate());
 

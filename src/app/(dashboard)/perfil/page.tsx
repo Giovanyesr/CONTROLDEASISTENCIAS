@@ -276,7 +276,7 @@ export default function PerfilPage() {
               <div>
                 <h2 className="text-xl font-bold text-foreground">{user.nombres} {user.apellidos}</h2>
                 <Badge variant="outline" className="mt-1.5 capitalize rounded-md">
-                  {user.rol === 'brigadier' ? 'Brigadier' : 'Alumno'}
+                  {user.rol === 'admin' ? 'Administrador' : user.rol === 'director' ? 'Director' : user.rol === 'tutor' ? 'Docente' : user.rol === 'brigadier' ? 'Brigadier' : 'Alumno'}
                 </Badge>
               </div>
             </div>
@@ -592,7 +592,7 @@ export default function PerfilPage() {
                       <p className="text-base font-bold text-foreground">{user.nombres} {user.apellidos}</p>
                       <p className="text-sm text-muted-foreground">DNI: {user.dni}</p>
                       <Badge variant="outline" className="mt-1 capitalize rounded-md text-xs">
-                        {user.rol === 'brigadier' ? 'Brigadier' : 'Alumno'}
+                         {user.rol === 'admin' ? 'Administrador' : user.rol === 'director' ? 'Director' : user.rol === 'tutor' ? 'Docente' : user.rol === 'brigadier' ? 'Brigadier' : 'Alumno'}
                       </Badge>
                     </div>
                     <div className="rounded-xl border bg-white p-2">
