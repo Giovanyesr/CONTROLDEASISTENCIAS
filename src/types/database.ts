@@ -11,6 +11,7 @@ export interface Perfil {
   foto_url: string | null;
   genero: string | null;
   rol: Rol;
+  es_brigadier?: boolean;
   estado: EstadoPerfil;
   uuid_qr: string;
   created_at: string;

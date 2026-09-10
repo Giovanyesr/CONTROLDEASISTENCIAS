@@ -22,7 +22,7 @@ export function MobileBottomNav() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
 
-  const visible = items.filter((i) => i.roles.includes(user?.rol || ''));
+  const visible = items.filter((i) => i.roles.includes(user?.rol || '') || (user?.es_brigadier && i.roles.includes('brigadier')));
 
   // Show max 5 items; pick the most relevant ones
   const priority: Record<string, number> = {

@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { QRDisplay } from '@/components/qr/qr-display';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -16,6 +15,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Download, QrCode, User, Phone, Fingerprint, Lock, Loader2, Camera, Pencil, GraduationCap, Contact, Smartphone } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { PwaInstallButton } from '@/components/PwaInstallButton';
+import { DynamicQR } from '@/components/qr/dynamic-qr';
 
 export default function PerfilPage() {
   const { user, refreshProfile } = useAuth();
@@ -276,7 +276,7 @@ export default function PerfilPage() {
               <div>
                 <h2 className="text-xl font-bold text-foreground">{user.nombres} {user.apellidos}</h2>
                 <Badge variant="outline" className="mt-1.5 capitalize rounded-md">
-                  {user.rol === 'admin' ? 'Administrador' : user.rol === 'director' ? 'Director' : user.rol === 'tutor' ? 'Docente' : user.rol === 'brigadier' ? 'Brigadier' : 'Alumno'}
+                   {user.rol === 'admin' ? 'Administrador' : user.rol === 'director' ? 'Director' : user.rol === 'tutor' ? 'Docente' : user.es_brigadier ? 'Brigadier · Alumno' : 'Alumno'}
                 </Badge>
               </div>
             </div>
@@ -481,7 +481,7 @@ export default function PerfilPage() {
                 </DialogContent>
               </Dialog>
 
-              {(user.rol === 'admin' || ['75185427', '30916', '00030916'].includes(user.dni)) && (
+              {user.rol === 'admin' && (
                 <Dialog open={passwordOpen} onOpenChange={setPasswordOpen}>
                   <DialogTrigger asChild>
                     <Button variant="outline" className="gap-2 rounded-xl">
@@ -548,7 +548,7 @@ export default function PerfilPage() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-md">
+        {(user.rol === 'alumno' || user.rol === 'brigadier') && <Card className="shadow-md">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-lg font-semibold">
               <QrCode className="h-5 w-5 text-primary" />
@@ -557,7 +557,7 @@ export default function PerfilPage() {
           </CardHeader>
           <CardContent className="flex flex-col items-center gap-4">
             <div className="qr-code-svg rounded-xl border bg-white p-4">
-              <QRDisplay uuid={user.uuid_qr} size={180} />
+              <DynamicQR />
             </div>
             <Button onClick={downloadQR} className="w-full gap-2 rounded-xl" variant="outline">
               <Download className="h-4 w-4" />
@@ -592,12 +592,10 @@ export default function PerfilPage() {
                       <p className="text-base font-bold text-foreground">{user.nombres} {user.apellidos}</p>
                       <p className="text-sm text-muted-foreground">DNI: {user.dni}</p>
                       <Badge variant="outline" className="mt-1 capitalize rounded-md text-xs">
-                         {user.rol === 'admin' ? 'Administrador' : user.rol === 'director' ? 'Director' : user.rol === 'tutor' ? 'Docente' : user.rol === 'brigadier' ? 'Brigadier' : 'Alumno'}
+                         {user.es_brigadier ? 'Brigadier · Alumno' : 'Alumno'}
                       </Badge>
                     </div>
-                    <div className="rounded-xl border bg-white p-2">
-                      <QRDisplay uuid={user.uuid_qr} size={130} showLabel={false} />
-                    </div>
+                     <p className="max-w-[220px] text-center text-xs text-muted-foreground">El QR de asistencia es temporal y solo se muestra en la pantalla principal.</p>
                   </div>
                   <Button onClick={downloadCard} className="w-full gap-2 rounded-xl">
                     <Download className="h-4 w-4" />
@@ -610,7 +608,7 @@ export default function PerfilPage() {
               Muestra este código al brigadier para registrar tu asistencia
             </p>
           </CardContent>
-        </Card>
+        </Card>}
 
         <PwaInstallButton />
       </div>

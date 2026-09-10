@@ -1,15 +1,25 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse } from 'next/server';
-
-const ADMIN_DNIS = ['75185427', '30916', '00030916'];
+import { getServerSession, isServerAdmin } from '@/lib/server-auth';
 
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const { id, adminDni, nombres, apellidos, celular, genero, estado, grado, seccion, apoderado_nombre, apoderado_celular } = body;
+    const { id, nombres, apellidos, celular, genero, estado, grado, seccion, apoderado_nombre, apoderado_celular } = body;
 
     if (!id) {
       return NextResponse.json({ error: 'ID requerido' }, { status: 400 });
+    }
+
+    const { user } = await getServerSession();
+    if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+
+    const adminEdit = nombres !== undefined || apellidos !== undefined || estado !== undefined || grado !== undefined || seccion !== undefined;
+    if (adminEdit) {
+      const { authorized } = await isServerAdmin();
+      if (!authorized) return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
+    } else if (user.id !== id) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
 
     const supabase = createServerClient(
@@ -17,11 +27,6 @@ export async function PUT(request: Request) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
       { cookies: { getAll: () => [], setAll: () => {} } }
     );
-
-    // If admin fields are present, verify admin access
-    if ((nombres !== undefined || apellidos !== undefined || estado !== undefined || grado !== undefined || seccion !== undefined) && !ADMIN_DNIS.includes(adminDni)) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
-    }
 
     // Perfiles updates
     const perfilesUpdates: Record<string, any> = {};

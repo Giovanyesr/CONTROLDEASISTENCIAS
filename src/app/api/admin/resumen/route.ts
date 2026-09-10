@@ -1,12 +1,11 @@
 import { NextResponse } from 'next/server';
+import { isServerAdmin } from '@/lib/server-auth';
 import { createServerClient } from '@supabase/ssr';
-
-const ADMIN_DNIS = ['75185427', '30916', '00030916'];
 
 export async function GET(request: Request) {
   try {
-    const adminDni = request.headers.get('x-admin-dni');
-    if (!adminDni || !ADMIN_DNIS.includes(adminDni)) {
+    const { authorized } = await isServerAdmin();
+    if (!authorized) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
 

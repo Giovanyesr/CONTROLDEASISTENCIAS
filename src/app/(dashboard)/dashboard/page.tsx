@@ -76,7 +76,7 @@ export default function DashboardPage() {
   const [miAlumno, setMiAlumno] = useState<any>(null);
   const supabase = createClient();
 
-  const esBrigadier = user?.rol === 'brigadier';
+  const esBrigadier = user?.rol === 'brigadier' || user?.es_brigadier === true;
   const esEstudiante = user?.rol === 'alumno' || user?.rol === 'brigadier';
   const esDirector = user?.rol === 'director';
 
@@ -88,13 +88,13 @@ export default function DashboardPage() {
   const [fechaRegistro, setFechaRegistro] = useState<string | null>(null);
   const [institucional, setInstitucional] = useState<any>(null);
 
-  const noLaborablesRef = useRef<Set<string>>(new Set());
+  const [noLaborables, setNoLaborables] = useState<Set<string>>(new Set());
 
   const esLaborable = (fecha: string) => {
     const d = new Date(fecha + 'T12:00:00');
     const dow = d.getDay();
     if (dow === 0 || dow === 6) return false;
-    if (noLaborablesRef.current.has(fecha)) return false;
+    if (noLaborables.has(fecha)) return false;
     return true;
   };
 
@@ -122,7 +122,7 @@ export default function DashboardPage() {
       try {
         const sup = createClient();
         const { data } = await sup.from('dias_no_laborables').select('fecha');
-        noLaborablesRef.current = new Set((data || []).map((r: any) => r.fecha));
+        setNoLaborables(new Set((data || []).map((r: any) => r.fecha)));
       } catch { /* table may not exist */ }
     };
     fetchDias();
@@ -344,7 +344,7 @@ export default function DashboardPage() {
             </div>
             <div>
               <p className="text-lg font-bold tracking-tight text-foreground">{user?.nombres} {user?.apellidos}</p>
-              <p className="text-sm capitalize text-muted-foreground">{user?.rol === 'brigadier' ? 'Brigadier' : 'Estudiante'}</p>
+               <p className="text-sm capitalize text-muted-foreground">{esBrigadier ? 'Brigadier · Alumno' : 'Estudiante'}</p>
             </div>
           </div>
           <div className="flex flex-wrap gap-3">

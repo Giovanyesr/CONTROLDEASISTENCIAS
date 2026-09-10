@@ -1,8 +1,11 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse } from 'next/server';
+import { isServerAdmin } from '@/lib/server-auth';
 
 export async function POST(request: Request) {
   try {
+    const { authorized } = await isServerAdmin();
+    if (!authorized) return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     const body = await request.json();
     const { dni, nombres, apellidos, celular, genero, grado, seccion, apoderado_nombre, apoderado_celular, password } = body;
 

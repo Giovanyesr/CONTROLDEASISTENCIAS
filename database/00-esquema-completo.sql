@@ -678,7 +678,7 @@ LANGUAGE sql
 STABLE
 SET timezone = 'America/Lima'
 AS $$
-  SELECT count(*)::int
+  SELECT CASE WHEN p_fecha > CURRENT_DATE THEN 9999 ELSE count(*)::int END
   FROM generate_series(p_fecha::timestamp + interval '1 day', CURRENT_DATE::timestamp, interval '1 day') d
   WHERE extract(isodow FROM d) < 6
     AND NOT EXISTS (SELECT 1 FROM public.dias_no_laborables n WHERE n.fecha = d::date);

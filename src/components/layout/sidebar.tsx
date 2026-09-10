@@ -46,7 +46,7 @@ export function Sidebar() {
   const [open, setOpen] = useState(false);
   const noLeidas = useNotificaciones();
 
-  const filteredNav = navItems.filter((item) => item.roles.includes(user?.rol || ''));
+  const filteredNav = navItems.filter((item) => item.roles.includes(user?.rol || '') || (user?.es_brigadier && item.roles.includes('brigadier')));
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
 
@@ -163,16 +163,16 @@ export function Sidebar() {
                 <p className="truncate text-xs capitalize text-muted-foreground/70 flex items-center gap-1">
                   <span className={cn(
                     'inline-block h-1.5 w-1.5 rounded-full',
-                    user.rol === 'brigadier' && 'bg-amber-500',
+                     user.es_brigadier && 'bg-amber-500',
                     user.rol === 'admin' && 'bg-red-500',
                     user.rol === 'director' && 'bg-blue-500',
                     user.rol === 'tutor' && 'bg-green-500',
                     user.rol === 'alumno' && 'bg-sky-500',
                   )} />
-                  {user.rol === 'admin' ? 'Administrador' :
-                   user.rol === 'director' ? 'Director' :
-                   user.rol === 'tutor' ? 'Tutor' :
-                   user.rol === 'brigadier' ? 'Brigadier' : 'Alumno'}
+                   {user.rol === 'admin' ? 'Administrador' :
+                    user.rol === 'director' ? 'Director' :
+                    user.rol === 'tutor' ? 'Tutor' :
+                    user.es_brigadier ? 'Brigadier · Alumno' : 'Alumno'}
                 </p>
               </div>
             </div>

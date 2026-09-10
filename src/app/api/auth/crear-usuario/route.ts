@@ -1,14 +1,14 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse } from 'next/server';
-
-const ADMIN_DNIS = ['75185427', '30916', '00030916'];
+import { isServerAdmin } from '@/lib/server-auth';
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { adminDni, dni, nombres, apellidos, celular, genero, rol, grado, seccion, apoderado_nombre, apoderado_celular, password } = body;
+    const { dni, nombres, apellidos, celular, genero, rol, grado, seccion, apoderado_nombre, apoderado_celular, password } = body;
 
-    if (!ADMIN_DNIS.includes(adminDni)) {
+    const { authorized } = await isServerAdmin();
+    if (!authorized) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
     if (!dni || dni.length !== 8 || !nombres || !apellidos || !rol || !password || password.length < 6) {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -38,18 +38,18 @@ export default function HistorialPage() {
   const [mesAsistencias, setMesAsistencias] = useState<Record<string, any>>({});
   const [diaSeleccionado, setDiaSeleccionado] = useState<any>(null);
   const [diaOpen, setDiaOpen] = useState(false);
-  const [justificationInfo, setJustificationInfo] = useState<{ motivo: string; evidencias: { nombre: string; url: string }[]; brigadier_nombre?: string } | null>(null);
+  const [justificationInfo, setJustificationInfo] = useState<{ motivo: string; evidencias: { id: string; nombre: string }[]; brigadier_nombre?: string } | null>(null);
   const [loadingJustInfo, setLoadingJustInfo] = useState(false);
   const [fechaRegistro, setFechaRegistro] = useState<string | null>(null);
 
-  const noLaborablesRef = useRef<Set<string>>(new Set());
+  const [noLaborables, setNoLaborables] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const fetchDias = async () => {
       try {
         const sup = createClient();
         const { data } = await sup.from('dias_no_laborables').select('fecha');
-        noLaborablesRef.current = new Set((data || []).map((r: any) => r.fecha));
+        setNoLaborables(new Set((data || []).map((r: any) => r.fecha)));
       } catch { /* table may not exist */ }
     };
     fetchDias();
@@ -75,11 +75,11 @@ export default function HistorialPage() {
     const d = new Date(fecha + 'T12:00:00');
     const dow = d.getDay();
     if (dow === 0 || dow === 6) return false;
-    if (noLaborablesRef.current.has(fecha)) return false;
+    if (noLaborables.has(fecha)) return false;
     return true;
   };
 
-  const esBrigadier = user?.rol === 'brigadier';
+  const esBrigadier = user?.rol === 'brigadier' || user?.es_brigadier === true;
 
   const peruNow = getPeruCalendarDate();
   const añoActual = peruNow.getFullYear();
@@ -119,11 +119,11 @@ export default function HistorialPage() {
       const j = justs[0] as any;
       const { data: evids } = await sup
         .from('evidencias')
-        .select('nombre_archivo, url')
+        .select('id, nombre_archivo')
         .eq('justificacion_id', j.id);
       setJustificationInfo({
         motivo: j.motivo,
-        evidencias: (evids || []).map(e => ({ nombre: e.nombre_archivo, url: e.url })),
+        evidencias: (evids || []).map(e => ({ id: e.id, nombre: e.nombre_archivo })),
         brigadier_nombre: j.perfiles ? `${j.perfiles.nombres} ${j.perfiles.apellidos}` : undefined,
       });
       setLoadingJustInfo(false);
@@ -577,7 +577,7 @@ export default function HistorialPage() {
                           <div className="space-y-2">
                             <p className="text-xs text-muted-foreground">Evidencias adjuntas</p>
                             {justificationInfo.evidencias.map((ev, i) => (
-                              <a key={i} href={ev.url} target="_blank" rel="noopener noreferrer"
+                              <a key={i} href={`/api/evidencias/${ev.id}`} target="_blank" rel="noopener noreferrer"
                                 className="flex items-center gap-2 rounded-xl border bg-card p-2.5 text-sm text-foreground transition-colors hover:bg-muted/50">
                                 <FileText className="h-4 w-4 text-primary shrink-0" />
                                 <span className="truncate">{ev.nombre}</span>

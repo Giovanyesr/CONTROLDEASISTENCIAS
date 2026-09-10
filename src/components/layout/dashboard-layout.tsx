@@ -22,7 +22,7 @@ const breadcrumbMap: Record<string, string> = {
   admin: 'Panel Admin',
 };
 
-const routeRoles: Record<string, string[]> = {
+  const routeRoles: Record<string, string[]> = {
   escaner: ['brigadier'],
   estudiantes: ['admin', 'director', 'tutor', 'brigadier'],
   justificaciones: ['admin', 'director', 'tutor', 'brigadier', 'alumno'],
@@ -43,12 +43,13 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
   const segment = pathname.split('/').filter(Boolean)[0];
   const requiredRoles = routeRoles[segment];
+  const hasRequiredRole = !requiredRoles || requiredRoles.includes(user?.rol || '') || (user?.es_brigadier === true && requiredRoles.includes('brigadier'));
 
   useEffect(() => {
-    if (!loading && user && requiredRoles && !requiredRoles.includes(user.rol)) {
+    if (!loading && user && requiredRoles && !hasRequiredRole) {
       router.push('/dashboard');
     }
-  }, [loading, user, requiredRoles, router]);
+  }, [loading, user, requiredRoles, hasRequiredRole, router]);
 
   if (loading) {
     return (
@@ -62,7 +63,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   }
 
   if (!user) return null;
-  if (requiredRoles && !requiredRoles.includes(user.rol)) return null;
+  if (requiredRoles && !hasRequiredRole) return null;
 
   const pathSegments = pathname.split('/').filter(Boolean);
   const breadcrumbs = pathSegments.map((segment, index) => {

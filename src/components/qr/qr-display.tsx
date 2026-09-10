@@ -5,12 +5,13 @@ import { Card, CardContent } from '@/components/ui/card';
 
 interface QRDisplayProps {
   uuid: string;
+  value?: string;
   size?: number;
   showLabel?: boolean;
 }
 
-export function QRDisplay({ uuid, size = 200, showLabel = true }: QRDisplayProps) {
-  const qrValue = `${typeof window !== 'undefined' ? window.location.origin : ''}/qr/${uuid}`;
+export function QRDisplay({ uuid, value, size = 200, showLabel = true }: QRDisplayProps) {
+  const qrValue = value || `${typeof window !== 'undefined' ? window.location.origin : ''}/qr/${uuid}`;
 
   return (
     <Card className="inline-block">

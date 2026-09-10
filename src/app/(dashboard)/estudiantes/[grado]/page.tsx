@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -80,7 +80,7 @@ export default function GradoPage() {
 
   const [diaSeleccionado, setDiaSeleccionado] = useState<{ fecha: string; estado?: string; alumno_id?: string; hora?: string; brigadier_nombre?: string } | null>(null);
   const [diaOpen, setDiaOpen] = useState(false);
-  const [justificationInfo, setJustificationInfo] = useState<{ motivo: string; evidencias: { nombre: string; url: string }[]; brigadier_nombre?: string } | null>(null);
+  const [justificationInfo, setJustificationInfo] = useState<{ motivo: string; evidencias: { id: string; nombre: string }[]; brigadier_nombre?: string } | null>(null);
   const [loadingJustInfo, setLoadingJustInfo] = useState(false);
 
   const [open, setOpen] = useState(false);
@@ -111,14 +111,14 @@ export default function GradoPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  const noLaborablesRef = useRef<Set<string>>(new Set());
+  const [noLaborables, setNoLaborables] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const fetchDias = async () => {
       try {
         const sup = createClient();
         const { data } = await sup.from('dias_no_laborables').select('fecha');
-        noLaborablesRef.current = new Set((data || []).map((r: any) => r.fecha));
+        setNoLaborables(new Set((data || []).map((r: any) => r.fecha)));
       } catch { /* table may not exist */ }
     };
     fetchDias();
@@ -128,7 +128,7 @@ export default function GradoPage() {
     const d = new Date(fecha + 'T12:00:00');
     const dow = d.getDay();
     if (dow === 0 || dow === 6) return false;
-    if (noLaborablesRef.current.has(fecha)) return false;
+    if (noLaborables.has(fecha)) return false;
     return true;
   };
 
@@ -137,7 +137,7 @@ export default function GradoPage() {
   const fetchPersonas = useCallback(async () => {
     const { data: perfiles } = await supabase
       .from('perfiles')
-      .select('*, alumno:alumnos(*)')
+      .select('*, alumno:alumnos(*), roles_funcionales(rol, activo)')
       .in('rol', ['alumno', 'brigadier'])
       .order('apellidos', { ascending: true });
 
@@ -174,7 +174,7 @@ export default function GradoPage() {
 
       const last5Days: string[] = [];
       const todayStr = getPeruDate();
-      let cursor = new Date(peruNow);
+      const cursor = new Date(peruNow);
       while (last5Days.length < 5) {
         const d = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}-${String(cursor.getDate()).padStart(2, '0')}`;
         if (esLaborable(d)) {
@@ -383,12 +383,12 @@ export default function GradoPage() {
       if (!justs || justs.length === 0) { setLoadingJustInfo(false); return; }
       const { data: evids } = await sup
         .from('evidencias')
-        .select('nombre_archivo, url')
+        .select('id, nombre_archivo')
         .eq('justificacion_id', justs[0].id);
       const j = justs[0] as any;
       setJustificationInfo({
         motivo: j.motivo,
-        evidencias: (evids || []).map(e => ({ nombre: e.nombre_archivo, url: e.url })),
+        evidencias: (evids || []).map(e => ({ id: e.id, nombre: e.nombre_archivo })),
         brigadier_nombre: j.perfiles ? `${j.perfiles.nombres} ${j.perfiles.apellidos}` : undefined,
       });
       setLoadingJustInfo(false);
@@ -430,7 +430,7 @@ export default function GradoPage() {
       const res = await fetch('/api/auth/restablecer-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uid: selectedStudentDetail?.id, password: resetPwdNew, adminDni: currentUser?.dni }),
+        body: JSON.stringify({ uid: selectedStudentDetail?.id, password: resetPwdNew }),
       });
       if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Error'); }
       toast.success('Contraseña restablecida correctamente');
@@ -461,7 +461,7 @@ export default function GradoPage() {
             <p className="text-sm text-muted-foreground">{filteredEstudiantes.length} registros</p>
           </div>
         </div>
-        {(currentUser?.rol === 'admin' || ['75185427', '30916', '00030916'].includes(currentUser?.dni ?? '')) && (
+        {currentUser?.rol === 'admin' && (
         <Button className="gap-2 rounded-xl btn-press" onClick={() => { setForm({ dni: '', nombres: '', apellidos: '', celular: '', genero: '', grado: gradoLabel, seccion: '', apoderado_nombre: '', apoderado_celular: '', password: '' }); setFormError(''); setOpen(true); }}>
           <Plus className="h-4 w-4" /> Registrar
         </Button>
@@ -528,7 +528,7 @@ export default function GradoPage() {
                     >
                       <td className="px-2 sm:px-4 py-2 sm:py-3">
                         <Avatar className="h-8 w-8 sm:h-9 sm:w-9 ring-2 ring-border">
-                          {est.foto_url ? <AvatarImage src={est.foto_url} alt="" className="object-cover" /> : (
+                          {est.foto_url ? <AvatarImage src={`/api/fotos/${est.id}`} alt="" className="object-cover" /> : (
                             <AvatarFallback className="bg-primary/10 text-[10px] sm:text-xs font-medium text-primary">
                               {est.nombres?.charAt(0)}{est.apellidos?.charAt(0)}
                             </AvatarFallback>
@@ -542,7 +542,7 @@ export default function GradoPage() {
                         <div className="text-[10px] sm:text-xs text-muted-foreground truncate">{est.dni} · {est.alumno?.seccion || 'Sin sección'}</div>
                         {/* Mobile role indicator */}
                         <div className="flex items-center gap-1 sm:hidden mt-1">
-                          {est.rol === 'brigadier' ? (
+                          {est.roles_funcionales?.some((r: any) => r.rol === 'brigadier' && r.activo) ? (
                             <span className="inline-flex items-center gap-0.5 rounded-md bg-purple-500/10 px-1.5 py-0.5 text-[9px] font-medium text-purple-600">
                               <ShieldCheck className="h-2.5 w-2.5" /> BRI
                             </span>
@@ -551,7 +551,7 @@ export default function GradoPage() {
                               <GraduationCap className="h-2.5 w-2.5" /> EST
                             </span>
                           )}
-                          {(currentUser?.rol === 'admin' || ['75185427', '30916', '00030916'].includes(currentUser?.dni ?? '')) && (<>
+                          {currentUser?.rol === 'admin' && (<>
                           <button
                             className="ml-auto text-muted-foreground/60 hover:text-foreground transition-colors"
                             onClick={(e) => { e.stopPropagation(); setRoleChangeTarget(est); setRoleChangeOpen(true); }}
@@ -571,7 +571,7 @@ export default function GradoPage() {
                       </td>
                       <td className="hidden sm:table-cell px-2 sm:px-4 py-2 sm:py-3">
                         <div className="flex items-center gap-1.5">
-                          {est.rol === 'brigadier' ? (
+                          {est.roles_funcionales?.some((r: any) => r.rol === 'brigadier' && r.activo) ? (
                             <Badge variant="default" className="gap-1 rounded-md text-[10px] px-2 py-0.5 bg-purple-500 hover:bg-purple-600">
                               <ShieldCheck className="h-3 w-3" /> Brigadier
                             </Badge>
@@ -580,7 +580,7 @@ export default function GradoPage() {
                               <GraduationCap className="h-3 w-3" /> Estudiante
                             </Badge>
                           )}
-                          {(currentUser?.rol === 'admin' || ['75185427', '30916', '00030916'].includes(currentUser?.dni ?? '')) && (<>
+                          {currentUser?.rol === 'admin' && (<>
                           <button
                             className="h-6 w-6 flex items-center justify-center rounded-md text-muted-foreground/60 hover:text-foreground hover:bg-muted transition-all"
                             onClick={(e) => { e.stopPropagation(); setRoleChangeTarget(est); setRoleChangeOpen(true); }}
@@ -632,7 +632,7 @@ export default function GradoPage() {
                 <div className="flex items-center gap-4">
                   <Avatar className="h-14 w-14 ring-2 ring-primary/20">
                     {selectedStudentDetail.foto_url ? (
-                      <AvatarImage src={selectedStudentDetail.foto_url} alt="" className="object-cover" />
+                        <AvatarImage src={`/api/fotos/${selectedStudentDetail.id}`} alt="" className="object-cover" />
                     ) : (
                       <AvatarFallback className="bg-gradient-to-br from-primary to-primary-dark text-sm font-semibold text-primary-foreground">
                         {selectedStudentDetail.nombres?.charAt(0)}{selectedStudentDetail.apellidos?.charAt(0)}
@@ -642,7 +642,7 @@ export default function GradoPage() {
                   <div className="flex-1 min-w-0">
                     <DialogTitle className="text-lg truncate">{selectedStudentDetail.apellidos} {selectedStudentDetail.nombres}</DialogTitle>
                     <div className="flex items-center gap-2 mt-1">
-                      {selectedStudentDetail.rol === 'brigadier' ? (
+                      {selectedStudentDetail.roles_funcionales?.some((r: any) => r.rol === 'brigadier' && r.activo) ? (
                         <Badge variant="default" className="gap-1 rounded-md text-[10px] px-2 py-0.5 bg-purple-500 hover:bg-purple-600">
                           <ShieldCheck className="h-3 w-3" /> Brigadier
                         </Badge>
@@ -741,7 +741,7 @@ export default function GradoPage() {
                   Ver historial de asistencias
                 </Button>
 
-                {(currentUser?.rol === 'admin' || ['75185427', '30916', '00030916'].includes(currentUser?.dni ?? '')) && (
+                {currentUser?.rol === 'admin' && (
                   <Button
                     variant="outline"
                     className="w-full gap-2 rounded-xl"
@@ -795,7 +795,7 @@ export default function GradoPage() {
               <DialogHeader>
                 <div className="flex items-center gap-3">
                   <Avatar className="h-10 w-10 ring-2 ring-primary/20">
-                    {selectedStudent.foto_url ? <AvatarImage src={selectedStudent.foto_url} alt="" className="object-cover" /> : (
+                    {selectedStudent.foto_url ? <AvatarImage src={`/api/fotos/${selectedStudent.id}`} alt="" className="object-cover" /> : (
                       <AvatarFallback className="bg-primary/10 text-sm font-medium text-primary">
                         {selectedStudent.nombres?.charAt(0)}{selectedStudent.apellidos?.charAt(0)}
                       </AvatarFallback>
@@ -1011,7 +1011,7 @@ export default function GradoPage() {
                           <div className="space-y-2">
                             <p className="text-xs text-muted-foreground">Evidencias adjuntas</p>
                             {justificationInfo.evidencias.map((ev, i) => (
-                              <a key={i} href={ev.url} target="_blank" rel="noopener noreferrer"
+                              <a key={i} href={`/api/evidencias/${ev.id}`} target="_blank" rel="noopener noreferrer"
                                 className="flex items-center gap-2 rounded-xl border bg-card p-2.5 text-sm text-foreground transition-all hover:bg-muted/50 hover:border-primary/30">
                                 <FileText className="h-4 w-4 text-primary shrink-0" />
                                 <span className="truncate">{ev.nombre}</span>

@@ -1,10 +1,14 @@
 import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import { getServerSession } from '@/lib/server-auth';
+import { getPeruDate } from '@/lib/utils';
 
 export async function POST(request: Request) {
   try {
     const cronSecret = process.env.CRON_SECRET;
+    if (!cronSecret) {
+      return NextResponse.json({ error: 'CRON_SECRET no configurado' }, { status: 500 });
+    }
     const authHeader = request.headers.get('authorization')?.replace('Bearer ', '');
     const isCron = cronSecret && authHeader === cronSecret;
 
@@ -24,32 +28,28 @@ export async function POST(request: Request) {
         .eq('estado', 'activo')
         .limit(1)
         .single();
-      if (!primerBrigadier) {
+      let automaticoId = primerBrigadier?.id;
+      if (!automaticoId) {
+        const { data: funcional } = await supabase
+          .from('roles_funcionales')
+          .select('perfil_id')
+          .eq('rol', 'brigadier')
+          .eq('activo', true)
+          .limit(1)
+          .maybeSingle();
+        automaticoId = funcional?.perfil_id;
+      }
+      if (!automaticoId) {
         return NextResponse.json({ error: 'No hay brigadieres registrados' }, { status: 400 });
       }
-      brigadierId = primerBrigadier.id;
+      brigadierId = automaticoId;
     } else {
-      const cookieStore = await cookies();
-      const supabaseAuth = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        {
-          cookies: {
-            getAll: () => cookieStore.getAll(),
-            setAll: () => {},
-          },
-        }
-      );
-      const { data: { user: authUser } } = await supabaseAuth.auth.getUser();
+      const { supabase: authClient, user: authUser } = await getServerSession();
       if (!authUser) {
         return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
       }
-      const { data: perfil } = await supabase
-        .from('perfiles')
-        .select('rol')
-        .eq('id', authUser.id)
-        .single();
-      if (!perfil || perfil.rol !== 'brigadier') {
+      const { data: brigadier } = await authClient.rpc('is_brigadier');
+      if (brigadier !== true) {
         return NextResponse.json({ error: 'Solo brigadieres pueden cerrar la asistencia' }, { status: 403 });
       }
       brigadierId = authUser.id;
@@ -62,6 +62,14 @@ export async function POST(request: Request) {
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
+
+    await supabase.from('cierres_diarios').upsert({
+      fecha: getPeruDate(),
+      ejecutado_por: isCron ? null : brigadierId,
+      automatico: Boolean(isCron),
+      resultado: data?.length ? 'completado' : 'sin_faltas',
+      faltas_generadas: data?.length || 0,
+    }, { onConflict: 'fecha' });
 
     return NextResponse.json({
       message: `Se registraron ${data?.length || 0} faltas automáticas`,

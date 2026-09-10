@@ -1,9 +1,13 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse } from 'next/server';
+import { isServerAdmin } from '@/lib/server-auth';
 
 export async function PUT(request: Request) {
   try {
     const { usuario_id, nuevo_rol } = await request.json();
+
+    const { authorized } = await isServerAdmin();
+    if (!authorized) return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
 
     if (!usuario_id || !nuevo_rol || !['alumno', 'brigadier'].includes(nuevo_rol)) {
       return NextResponse.json({ error: 'Parámetros inválidos' }, { status: 400 });

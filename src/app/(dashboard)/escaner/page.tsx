@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { QRScanner } from '@/components/qr/qr-scanner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,7 +22,6 @@ export default function EscanerPage() {
   const [loading, setLoading] = useState(false);
   const [scanning, setScanning] = useState(true);
   const { user } = useAuth();
-  const supabase = createClient();
 
   const [config, setConfig] = useState<IntervalosAsistencia | null>(null);
   const [configOpen, setConfigOpen] = useState(false);
@@ -70,12 +68,13 @@ export default function EscanerPage() {
     setScanning(false);
 
     try {
-      const { data, error } = await supabase.rpc('registrar_asistencia', {
-        p_alumno_uuid: uuid,
-        p_brigadier_id: user.id,
+      const response = await fetch('/api/asistencia/registrar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: uuid }),
       });
-
-      if (error) throw error;
+      const data = await response.json();
+      if (!response.ok && !data?.exito) throw new Error(data.error || data.mensaje || 'Error al registrar');
 
       setResult(data);
 
@@ -96,7 +95,7 @@ export default function EscanerPage() {
     } finally {
       setLoading(false);
     }
-  }, [user, supabase]);
+  }, [user]);
 
   const handleScanError = (error: string) => {
     toast.error(error);
@@ -116,7 +115,7 @@ export default function EscanerPage() {
             Escanea el código QR del estudiante para registrar su asistencia
           </p>
         </div>
-        {user?.rol === 'brigadier' && (
+        {user?.es_brigadier && (
           <Dialog open={configOpen} onOpenChange={setConfigOpen}>
             <DialogTrigger asChild>
               <Button variant="outline" size="sm" className="gap-2 rounded-xl">

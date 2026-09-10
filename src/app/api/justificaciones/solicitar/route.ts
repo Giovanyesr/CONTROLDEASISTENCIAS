@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import { getPeruDate } from '@/lib/utils';
 
 export async function POST(request: Request) {
   try {
@@ -36,41 +37,31 @@ export async function POST(request: Request) {
       { cookies: { getAll: () => [], setAll: () => {} } }
     );
 
-    // Si la falta es inferida (sin registro aún, id "fecha:YYYY-MM-DD"), crear el registro
+    let solicitudData: any = null;
+
+    // La RPC crea la falta y la solicitud dentro de la misma transaccion.
     if (asistencia_id.startsWith('fecha:')) {
       const fecha = asistencia_id.replace('fecha:', '');
-      const { data: existente } = await svc
-        .from('asistencias')
-        .select('id')
-        .eq('alumno_id', user.id)
-        .eq('fecha', fecha)
-        .maybeSingle();
-
-      if (existente) {
-        asistencia_id = existente.id;
-      } else {
-        const { data: insertado, error: errIns } = await svc
-          .from('asistencias')
-          .insert({
-            alumno_id: user.id,
-            brigadier_id: user.id,
-            fecha,
-            hora: '00:00:00',
-            estado: 'falta_injustificada',
-          })
-          .select('id')
-          .single();
-        if (errIns || !insertado) {
-          return NextResponse.json({ error: 'No se pudo registrar la falta' }, { status: 500 });
-        }
-        asistencia_id = insertado.id;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha) || fecha > getPeruDate()) {
+        return NextResponse.json({ error: 'La fecha de la falta no es válida' }, { status: 400 });
       }
+      const { data, error } = await supabase.rpc('solicitar_justificacion_por_fecha', {
+        p_fecha: fecha,
+        p_motivo: motivo.trim(),
+      });
+      if (error || !data?.exito) {
+        return NextResponse.json({ error: error?.message || data?.mensaje || 'No se pudo enviar la solicitud' }, { status: 400 });
+      }
+      asistencia_id = data.asistencia_id;
+      solicitudData = data;
     }
 
-    const { data, error } = await supabase.rpc('solicitar_justificacion', {
-      p_asistencia_id: asistencia_id,
-      p_motivo: motivo.trim(),
-    });
+    const { data, error } = solicitudData
+      ? { data: solicitudData, error: null }
+      : await supabase.rpc('solicitar_justificacion', {
+          p_asistencia_id: asistencia_id,
+          p_motivo: motivo.trim(),
+        });
 
     if (error || !data?.exito) {
       return NextResponse.json({ error: error?.message || data?.mensaje || 'No se pudo enviar la solicitud' }, { status: 400 });
@@ -91,11 +82,10 @@ export async function POST(request: Request) {
           .from('evidencias')
           .upload(fileName, file, { contentType: file.type });
         if (!uploadError) {
-          const { data: urlData } = svc.storage.from('evidencias').getPublicUrl(fileName);
           await svc.from('evidencias').insert({
             justificacion_id: justs.id,
             nombre_archivo: file.name,
-            url: urlData.publicUrl,
+            url: fileName,
             tipo_mime: file.type,
             tamano_bytes: file.size,
           });

@@ -1,10 +1,11 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse } from 'next/server';
-
-const ADMIN_DNIS = ['75185427', '30916', '00030916'];
+import { isServerAdmin } from '@/lib/server-auth';
 
 export async function GET(request: Request) {
   try {
+    const { authorized } = await isServerAdmin();
+    if (!authorized) return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     const { searchParams } = new URL(request.url);
     const tutorId = searchParams.get('tutor_id');
 
@@ -26,12 +27,11 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const { authorized } = await isServerAdmin();
+    if (!authorized) return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     const body = await request.json();
-    const { adminDni, tutor_id, grado, seccion } = body;
+    const { tutor_id, grado, seccion } = body;
 
-    if (!ADMIN_DNIS.includes(adminDni)) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
-    }
     if (!tutor_id || !grado || !seccion) {
       return NextResponse.json({ error: 'tutor_id, grado y seccion requeridos' }, { status: 400 });
     }
@@ -64,11 +64,10 @@ export async function POST(request: Request) {
 export async function DELETE(request: Request) {
   try {
     const body = await request.json();
-    const { adminDni, id } = body;
+    const { id } = body;
 
-    if (!ADMIN_DNIS.includes(adminDni)) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
-    }
+    const { authorized } = await isServerAdmin();
+    if (!authorized) return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     if (!id) {
       return NextResponse.json({ error: 'id requerido' }, { status: 400 });
     }

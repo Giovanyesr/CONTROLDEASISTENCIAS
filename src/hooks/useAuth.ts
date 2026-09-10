@@ -11,14 +11,37 @@ export function useAuth() {
   const router = useRouter();
   const supabase = createClient();
 
+  const hydratePhoto = async (perfil: Perfil): Promise<Perfil> => {
+    if (!perfil.foto_url) return perfil;
+    const path = perfil.foto_url.includes('/fotos/')
+      ? perfil.foto_url.split('/fotos/')[1]
+      : perfil.foto_url.startsWith(`${perfil.id}/`) ? perfil.foto_url : null;
+    if (!path) return perfil;
+    try {
+      const response = await fetch(`/api/auth/foto-url?path=${encodeURIComponent(path)}`);
+      const data = await response.json();
+      if (response.ok && data.signed_url) return { ...perfil, foto_url: data.signed_url };
+    } catch {}
+    return perfil;
+  };
+
   const loadProfile = async (authUser: { id: string; email?: string | null; user_metadata?: Record<string, unknown> | null }) => {
+    const addFunctionalRoles = async (perfil: Perfil): Promise<Perfil> => {
+      const { data } = await supabase
+        .from('roles_funcionales')
+        .select('rol')
+        .eq('perfil_id', perfil.id)
+        .eq('activo', true);
+      return { ...perfil, es_brigadier: (data || []).some(r => r.rol === 'brigadier') };
+    };
+
     // 1. Try direct DB query by auth ID (works when IDs match or is a brigadier)
     const { data: byId } = await supabase
       .from('perfiles')
       .select('*')
       .eq('id', authUser.id)
       .maybeSingle();
-    if (byId) { setUser(byId); return byId; }
+    if (byId) { const perfil = await hydratePhoto(await addFunctionalRoles(byId)); setUser(perfil); return perfil; }
 
     // 2. Look up by DNI via server-side API (bypasses RLS with service_role)
     if (authUser.email) {
@@ -32,8 +55,9 @@ export function useAuth() {
           });
           if (res.ok) {
             const perfil = await res.json() as Perfil;
-            setUser(perfil);
-            return perfil;
+            const perfilCompleto = await hydratePhoto(await addFunctionalRoles(perfil));
+            setUser(perfilCompleto);
+            return perfilCompleto;
           }
         } catch {}
       }
@@ -53,6 +77,7 @@ export function useAuth() {
         rol: ((meta.rol ?? meta.role) as Rol | undefined) ?? 'alumno',
         estado: 'activo',
         uuid_qr: '',
+        es_brigadier: false,
         created_at: '',
         updated_at: '',
       };

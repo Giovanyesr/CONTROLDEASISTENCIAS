@@ -50,7 +50,7 @@ async function main() {
         const sqlErr = await sqlRes.text();
         console.error('Error SQL directo:', sqlErr);
         console.log('\nEjecuta manualmente en el SQL Editor de Supabase:');
-        console.log('ALTER TABLE perfiles ADD COLUMN IF NOT EXISTS genero VARCHAR(20) CHECK (genero IN (\\'masculino\\', \\'femenino\\', \\'otro\\'));');
+        console.log("ALTER TABLE perfiles ADD COLUMN IF NOT EXISTS genero VARCHAR(20) CHECK (genero IN ('masculino', 'femenino', 'otro')); ");
         process.exit(1);
       }
     }

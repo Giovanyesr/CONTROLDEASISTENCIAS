@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent } from '@/components/ui/card';
@@ -61,7 +61,7 @@ export default function JustificacionesPage() {
   const esDirector = user?.rol === 'director';
   const puedeSolicitar = user?.rol === 'alumno' || user?.rol === 'brigadier';
 
-  const fetchItems = useCallback(async () => {
+  const fetchItems = async () => {
     setLoading(true);
     try {
       let query = supabase
@@ -82,12 +82,12 @@ export default function JustificacionesPage() {
     } catch {} finally {
       setLoading(false);
     }
-  }, [puedeSolicitar, soloPendientes, user?.id, supabase]);
+  };
 
   useEffect(() => {
     if (!user) return;
     fetchItems();
-  }, [user, fetchItems]);
+  }, [user, puedeSolicitar, soloPendientes, supabase]);
 
   const cargarFaltas = async () => {
     if (!puedeSolicitar) return;
@@ -255,7 +255,7 @@ export default function JustificacionesPage() {
                     <TableCell className="max-w-[240px] truncate text-sm text-muted-foreground">{it.motivo}</TableCell>
                     <TableCell>
                       {it.evidencias?.length ? (
-                        <a href={it.evidencias[0].url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
+                         <a href={`/api/evidencias/${it.evidencias[0].id}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
                           <FileText className="h-3.5 w-3.5" /> {it.evidencias[0].nombre_archivo}
                         </a>
                       ) : (
@@ -303,7 +303,7 @@ export default function JustificacionesPage() {
                   <p className="text-sm font-medium text-foreground">Evidencias</p>
                   <div className="mt-1 flex flex-wrap gap-2">
                     {reviewTarget.evidencias.map((e: any) => (
-                      <a key={e.id} href={e.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs text-primary hover:bg-primary/5">
+                       <a key={e.id} href={`/api/evidencias/${e.id}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs text-primary hover:bg-primary/5">
                         <FileText className="h-3.5 w-3.5" /> {e.nombre_archivo}
                       </a>
                     ))}

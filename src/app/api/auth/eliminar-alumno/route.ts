@@ -1,10 +1,14 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse } from 'next/server';
+import { isServerAdmin } from '@/lib/server-auth';
 
 export async function DELETE(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
+
+    const { authorized } = await isServerAdmin();
+    if (!authorized) return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
 
     if (!id) {
       return NextResponse.json({ error: 'ID requerido' }, { status: 400 });

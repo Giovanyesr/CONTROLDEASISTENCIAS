@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
+import { isServerAdmin } from '@/lib/server-auth';
 
 export async function POST(request: Request) {
   try {
-    const { uid, password, adminDni } = await request.json();
+    const { uid, password } = await request.json();
 
-    if (!['75185427', '30916', '00030916'].includes(adminDni)) {
+    const { authorized } = await isServerAdmin();
+    if (!authorized) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
 

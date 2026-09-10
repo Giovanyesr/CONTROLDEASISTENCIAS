@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getServerSession, isServerAdmin } from '@/lib/server-auth';
 
 export async function GET() {
+  const { supabase: authClient, user } = await getServerSession();
+  if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+  const { data: staff } = await authClient.rpc('is_staff');
+  if (staff !== true) return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -21,6 +26,8 @@ export async function GET() {
 }
 
 export async function PUT(request: Request) {
+  const { authorized } = await isServerAdmin();
+  if (!authorized) return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!

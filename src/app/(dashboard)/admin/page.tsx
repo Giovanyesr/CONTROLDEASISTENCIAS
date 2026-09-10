@@ -85,10 +85,10 @@ export default function AdminPage() {
   const [assignGrado, setAssignGrado] = useState('');
   const [assignSeccion, setAssignSeccion] = useState('');
 
-  const esAdmin = !authLoading && user && (user.rol === 'admin' || ['75185427', '30916', '00030916'].includes(user.dni));
+  const esAdmin = !authLoading && user?.rol === 'admin';
 
   const fetchResumen = useCallback(async () => {
-    const res = await fetch('/api/admin/resumen', { headers: { 'x-admin-dni': user?.dni || '' } });
+    const res = await fetch('/api/admin/resumen');
     if (res.ok) setResumen(await res.json());
   }, [user]);
 
@@ -96,7 +96,7 @@ export default function AdminPage() {
     setLoading(true);
     setError(false);
     try {
-      const res = await fetch(`/api/usuarios?rol=${rol}`, { headers: { 'x-admin-dni': user?.dni || '' } });
+      const res = await fetch(`/api/usuarios?rol=${rol}`);
       if (!res.ok) throw new Error('Error');
       setUsers(await res.json());
     } catch {
@@ -142,7 +142,7 @@ export default function AdminPage() {
       const res = await fetch('/api/auth/crear-usuario', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ adminDni: user?.dni, ...form, rol: activeTab, genero: form.genero || null, grado: form.grado || null, seccion: form.seccion || null }),
+        body: JSON.stringify({ ...form, rol: activeTab, genero: form.genero || null, grado: form.grado || null, seccion: form.seccion || null }),
       });
       if (!res.ok) { const err = await res.json(); throw new Error(err.error); }
       toast.success(`${rolSingular[activeTab]} creado correctamente`);
@@ -159,7 +159,7 @@ export default function AdminPage() {
       const res = await fetch('/api/auth/actualizar-perfil', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: editTarget.id, adminDni: user?.dni, ...editForm }),
+        body: JSON.stringify({ id: editTarget.id, ...editForm }),
       });
       if (!res.ok) { const err = await res.json(); throw new Error(err.error); }
       toast.success('Usuario actualizado correctamente');
@@ -176,7 +176,7 @@ export default function AdminPage() {
       const res = await fetch('/api/auth/actualizar-perfil', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: u.id, adminDni: user?.dni, estado: nuevo }),
+        body: JSON.stringify({ id: u.id, estado: nuevo }),
       });
       if (!res.ok) { const err = await res.json(); throw new Error(err.error); }
       toast.success(nuevo === 'activo' ? 'Usuario activado' : 'Usuario desactivado');
@@ -202,7 +202,7 @@ export default function AdminPage() {
       const res = await fetch('/api/tutores/asignar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ adminDni: user?.dni, tutor_id: assignTutorId, grado: assignGrado, seccion: assignSeccion }),
+        body: JSON.stringify({ tutor_id: assignTutorId, grado: assignGrado, seccion: assignSeccion }),
       });
       if (!res.ok) { const err = await res.json(); throw new Error(err.error); }
       toast.success('Docente asignado correctamente');
@@ -372,7 +372,7 @@ export default function AdminPage() {
                             <div className="flex flex-col items-center gap-2">
                               <Search className="h-6 w-6 text-muted-foreground/40" />
                               <p className="text-sm font-medium text-foreground">Sin resultados</p>
-                              <p className="text-xs text-muted-foreground">No se encontró ningún usuario con "{search}"</p>
+                              <p className="text-xs text-muted-foreground">No se encontró ningún usuario con &quot;{search}&quot;</p>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -381,7 +381,7 @@ export default function AdminPage() {
                           <TableCell>
                             <div className="flex items-center gap-3">
                               <Avatar className="h-9 w-9 ring-1 ring-border">
-                                {u.foto_url ? <AvatarImage src={u.foto_url} alt="" /> : (
+                                {u.foto_url ? <AvatarImage src={`/api/fotos/${u.id}`} alt="" /> : (
                                   <AvatarFallback className="bg-gradient-to-br from-primary to-primary-dark text-xs font-bold text-primary-foreground">
                                     {u.nombres?.charAt(0)}{u.apellidos?.charAt(0)}
                                   </AvatarFallback>

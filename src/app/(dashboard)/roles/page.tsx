@@ -83,13 +83,13 @@ export default function RolesPage() {
   const [assignGrado, setAssignGrado] = useState('');
   const [assignSeccion, setAssignSeccion] = useState('');
 
-  const esAdmin = !authLoading && user && (user.rol === 'admin' || ['75185427', '30916', '00030916'].includes(user.dni));
+  const esAdmin = !authLoading && user?.rol === 'admin';
 
   const fetchUsers = useCallback(async (rol: string) => {
     setLoading(true);
     setError(false);
     try {
-      const res = await fetch(`/api/usuarios?rol=${rol}`, { headers: { 'x-admin-dni': user?.dni || '' } });
+      const res = await fetch(`/api/usuarios?rol=${rol}`);
       if (!res.ok) throw new Error('Error');
       setUsers(await res.json());
     } catch {
@@ -134,7 +134,7 @@ export default function RolesPage() {
       const res = await fetch('/api/auth/crear-usuario', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ adminDni: user?.dni, ...form, rol: activeTab, genero: form.genero || null, grado: form.grado || null, seccion: form.seccion || null }),
+        body: JSON.stringify({ ...form, rol: activeTab, genero: form.genero || null, grado: form.grado || null, seccion: form.seccion || null }),
       });
       if (!res.ok) { const err = await res.json(); throw new Error(err.error); }
       toast.success(`${rolSingular[activeTab]} creado correctamente`);
@@ -150,7 +150,7 @@ export default function RolesPage() {
       const res = await fetch('/api/auth/actualizar-perfil', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: editTarget.id, adminDni: user?.dni, ...editForm }),
+        body: JSON.stringify({ id: editTarget.id, ...editForm }),
       });
       if (!res.ok) { const err = await res.json(); throw new Error(err.error); }
       toast.success('Usuario actualizado correctamente');
@@ -166,10 +166,24 @@ export default function RolesPage() {
       const res = await fetch('/api/auth/actualizar-perfil', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: u.id, adminDni: user?.dni, estado: nuevo }),
+        body: JSON.stringify({ id: u.id, estado: nuevo }),
       });
       if (!res.ok) { const err = await res.json(); throw new Error(err.error); }
       toast.success(nuevo === 'activo' ? 'Usuario activado' : 'Usuario desactivado');
+      fetchUsers(activeTab);
+    } catch (err: any) { toast.error(err.message); }
+  };
+
+  const handleToggleBrigadier = async (u: any) => {
+    const actual = u.roles_funcionales?.some((r: any) => r.rol === 'brigadier' && r.activo);
+    try {
+      const res = await fetch('/api/auth/asignar-brigadier', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ usuario_id: u.id, activo: !actual }),
+      });
+      if (!res.ok) { const err = await res.json(); throw new Error(err.error); }
+      toast.success(actual ? 'Rol funcional retirado' : 'Rol funcional brigadier asignado');
       fetchUsers(activeTab);
     } catch (err: any) { toast.error(err.message); }
   };
@@ -191,7 +205,7 @@ export default function RolesPage() {
       const res = await fetch('/api/tutores/asignar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ adminDni: user?.dni, tutor_id: assignTutorId, grado: assignGrado, seccion: assignSeccion }),
+        body: JSON.stringify({ tutor_id: assignTutorId, grado: assignGrado, seccion: assignSeccion }),
       });
       if (!res.ok) { const err = await res.json(); throw new Error(err.error); }
       toast.success('Tutor asignado correctamente');
@@ -329,7 +343,7 @@ export default function RolesPage() {
                             <div className="flex flex-col items-center gap-2">
                               <Search className="h-6 w-6 text-muted-foreground/40" />
                               <p className="text-sm font-medium text-foreground">Sin resultados</p>
-                              <p className="text-xs text-muted-foreground">No se encontró ningún usuario con "{search}"</p>
+                               <p className="text-xs text-muted-foreground">No se encontró ningún usuario con &quot;{search}&quot;</p>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -338,7 +352,7 @@ export default function RolesPage() {
                           <TableCell>
                             <div className="flex items-center gap-3">
                               <Avatar className="h-9 w-9 ring-1 ring-border">
-                                {u.foto_url ? <AvatarImage src={u.foto_url} alt="" /> : (
+                                 {u.foto_url ? <AvatarImage src={`/api/fotos/${u.id}`} alt="" /> : (
                                   <AvatarFallback className="bg-gradient-to-br from-primary to-primary-dark text-xs font-bold text-primary-foreground">
                                     {u.nombres?.charAt(0)}{u.apellidos?.charAt(0)}
                                   </AvatarFallback>
@@ -346,7 +360,8 @@ export default function RolesPage() {
                               </Avatar>
                               <div className="min-w-0">
                                 <p className="truncate text-sm font-medium text-foreground">{u.apellidos} {u.nombres}</p>
-                                <p className="truncate text-xs text-muted-foreground">{u.genero ? u.genero[0].toUpperCase() + u.genero.slice(1) : '—'}</p>
+                                 <p className="truncate text-xs text-muted-foreground">{u.genero ? u.genero[0].toUpperCase() + u.genero.slice(1) : '—'}</p>
+                                 {u.roles_funcionales?.some((r: any) => r.rol === 'brigadier' && r.activo) && <Badge variant="outline" className="mt-1 rounded-md px-1.5 py-0 text-[10px] text-amber-700">Brigadier funcional</Badge>}
                               </div>
                             </div>
                           </TableCell>
@@ -377,9 +392,12 @@ export default function RolesPage() {
                                   <DropdownMenuItem className="gap-2 rounded-lg" onClick={() => { setEditTarget(u); setEditForm({ nombres: u.nombres, apellidos: u.apellidos, celular: u.celular || '', genero: u.genero || '', estado: u.estado || 'activo', grado: u.alumno?.grado || '', seccion: u.alumno?.seccion || '' }); setEditOpen(true); }}>
                                     <Pencil className="h-4 w-4" /> Editar
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem className="gap-2 rounded-lg" onClick={() => handleToggleEstado(u)}>
-                                    <Power className="h-4 w-4" /> {u.estado === 'activo' ? 'Desactivar' : 'Activar'}
-                                  </DropdownMenuItem>
+                                   <DropdownMenuItem className="gap-2 rounded-lg" onClick={() => handleToggleEstado(u)}>
+                                     <Power className="h-4 w-4" /> {u.estado === 'activo' ? 'Desactivar' : 'Activar'}
+                                   </DropdownMenuItem>
+                                   {key === 'alumno' && <DropdownMenuItem className="gap-2 rounded-lg" onClick={() => handleToggleBrigadier(u)}>
+                                     <ShieldCheck className="h-4 w-4" /> {u.roles_funcionales?.some((r: any) => r.rol === 'brigadier' && r.activo) ? 'Quitar brigadier' : 'Asignar brigadier'}
+                                   </DropdownMenuItem>}
                                   <Separator className="my-1" />
                                   <DropdownMenuItem className="gap-2 rounded-lg text-red-600 focus:text-red-600" onClick={() => handleDeleteUser(u)}>
                                     <Trash2 className="h-4 w-4" /> Eliminar
