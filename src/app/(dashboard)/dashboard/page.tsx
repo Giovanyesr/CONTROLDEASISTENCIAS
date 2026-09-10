@@ -148,7 +148,8 @@ export default function DashboardPage() {
           .from('asistencias')
           .select('fecha, estado')
           .eq('alumno_id', user.id)
-          .gte('fecha', primerDiaMes);
+          .gte('fecha', primerDiaMes)
+          .lte('fecha', getPeruDate());
         if (mesData) {
           setMesAsistencias(Object.fromEntries(mesData.map(r => [r.fecha, r.estado])));
         }
@@ -190,8 +191,8 @@ export default function DashboardPage() {
   const hoyStr = getPeruDate();
   let presentes = 0, tardanzas = 0, faltasJustificadas = 0, faltasInjustificadas = 0;
   if (fechaRegistro) {
-    const inicio = new Date(fechaRegistro);
-    const fin = new Date(hoyStr);
+    const inicio = new Date(`${fechaRegistro}T12:00:00`);
+    const fin = new Date(`${hoyStr}T12:00:00`);
     for (let d = new Date(inicio); d <= fin; d.setDate(d.getDate() + 1)) {
       const f = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       if (!esLaborable(f)) continue;
@@ -464,7 +465,11 @@ export default function DashboardPage() {
                 const hoy = fecha === getPeruDate();
                 const esPasadoLaborable = !esFuturo && !noLaborable;
                 const antesDeRegistro = fechaRegistro && fecha < fechaRegistro;
-                const estado = rawEstado || (esPasadoLaborable && !antesDeRegistro ? 'falta_injustificada' : undefined);
+                 const estado = !esFuturo && rawEstado
+                   ? rawEstado
+                   : esPasadoLaborable && !antesDeRegistro
+                     ? 'falta_injustificada'
+                     : undefined;
                 const clickable = !!estado;
                 return (
                   <div
