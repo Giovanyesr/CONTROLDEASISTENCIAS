@@ -155,7 +155,7 @@ export default function DashboardPage() {
           .from('alumnos')
           .select('created_at, grado, seccion')
           .eq('perfil_id', user.id)
-          .single();
+          .maybeSingle();
         if (alumno?.created_at) {
           setFechaRegistro(getPeruDate(alumno.created_at));
         }
@@ -214,24 +214,20 @@ export default function DashboardPage() {
   const statsMap = Object.fromEntries((misStats ?? []).map((s: any) => [s.fecha, s.estado]));
   const hoyStr = getPeruDate();
   let presentes = 0, tardanzas = 0, faltasJustificadas = 0, faltasInjustificadas = 0;
-  if (fechaRegistro) {
-    const inicio = new Date(`${fechaRegistro}T12:00:00`);
-    const fin = new Date(`${hoyStr}T12:00:00`);
-    for (let d = new Date(inicio); d <= fin; d.setDate(d.getDate() + 1)) {
-      const f = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      if (!esLaborable(f)) continue;
-      const estado = statsMap[f];
-      if (estado === 'presente') presentes++;
-      else if (estado === 'tardanza') tardanzas++;
-      else if (estado === 'falta_justificada') faltasJustificadas++;
-      else if (estado === 'falta_injustificada') faltasInjustificadas++;
-      else if (f < hoyStr) faltasInjustificadas++;
-    }
-  } else {
-    presentes = (misStats ?? []).filter((s: any) => s.estado === 'presente').length;
-    tardanzas = (misStats ?? []).filter((s: any) => s.estado === 'tardanza').length;
-    faltasJustificadas = (misStats ?? []).filter((s: any) => s.estado === 'falta_justificada').length;
-    faltasInjustificadas = (misStats ?? []).filter((s: any) => s.estado === 'falta_injustificada').length;
+  const inicioMes = `${añoActual}-${String(mesActual + 1).padStart(2, '0')}-01`;
+  const inicioPeriodo = fechaRegistro && fechaRegistro > inicioMes ? fechaRegistro : inicioMes;
+  const inicio = new Date(`${inicioPeriodo}T12:00:00`);
+  const fin = new Date(`${hoyStr}T12:00:00`);
+  for (let d = new Date(inicio); d <= fin; d.setDate(d.getDate() + 1)) {
+    const f = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    if (f > hoyStr) break;
+    if (!esLaborable(f)) continue;
+    const estado = statsMap[f];
+    if (estado === 'presente') presentes++;
+    else if (estado === 'tardanza') tardanzas++;
+    else if (estado === 'falta_justificada') faltasJustificadas++;
+    else if (estado === 'falta_injustificada') faltasInjustificadas++;
+    else if (f < hoyStr) faltasInjustificadas++;
   }
   const totalMisRegistros = presentes + tardanzas + faltasJustificadas + faltasInjustificadas;
   const porcentajePersonal = totalMisRegistros > 0 ? Math.round(((presentes + tardanzas) / totalMisRegistros) * 100) : 0;
