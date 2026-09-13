@@ -15,7 +15,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Download, QrCode, User, Phone, Fingerprint, Lock, Loader2, Camera, Pencil, GraduationCap, Contact, Smartphone } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { PwaInstallButton } from '@/components/PwaInstallButton';
-import { DynamicQR } from '@/components/qr/dynamic-qr';
+import { QRDisplay } from '@/components/qr/qr-display';
 
 export default function PerfilPage() {
   const { user, refreshProfile } = useAuth();
@@ -557,7 +557,7 @@ export default function PerfilPage() {
           </CardHeader>
           <CardContent className="flex flex-col items-center gap-4">
             <div className="qr-code-svg rounded-xl border bg-white p-4">
-              <DynamicQR />
+              <QRDisplay uuid={user.uuid_qr} value={user.uuid_qr} size={180} showLabel={false} />
             </div>
             <Button onClick={downloadQR} className="w-full gap-2 rounded-xl" variant="outline">
               <Download className="h-4 w-4" />
@@ -595,7 +595,7 @@ export default function PerfilPage() {
                          {user.es_brigadier ? 'Brigadier · Alumno' : 'Alumno'}
                       </Badge>
                     </div>
-                     <p className="max-w-[220px] text-center text-xs text-muted-foreground">El QR de asistencia es temporal y solo se muestra en la pantalla principal.</p>
+                     <p className="max-w-[220px] text-center text-xs text-muted-foreground">Código de asistencia único del estudiante.</p>
                   </div>
                   <Button onClick={downloadCard} className="w-full gap-2 rounded-xl">
                     <Download className="h-4 w-4" />

@@ -3,6 +3,7 @@
 -- Zona horaria: America/Lima
 -- ============================================================
 
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 SET TIME ZONE 'America/Lima';
 
 UPDATE storage.buckets

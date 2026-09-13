@@ -71,7 +71,7 @@ export default function EscanerPage() {
       const response = await fetch('/api/asistencia/registrar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: uuid }),
+        body: JSON.stringify({ uuid }),
       });
       const data = await response.json();
       if (!response.ok && !data?.exito) throw new Error(data.error || data.mensaje || 'Error al registrar');
