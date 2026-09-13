@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { createClient } from '@/lib/supabase/client';
 import { QRScanner } from '@/components/qr/qr-scanner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -29,12 +30,28 @@ export default function EscanerPage() {
   const [configError, setConfigError] = useState('');
   const [editForm, setEditForm] = useState({ inicio: '', limite_presente: '', limite_tardanza: '' });
 
-  useEffect(() => {
-    fetch('/api/configuracion/asistencia')
-      .then(r => r.json())
-      .then(d => { setConfig(d); setEditForm({ inicio: d.inicio.slice(0, 5), limite_presente: d.limite_presente.slice(0, 5), limite_tardanza: d.limite_tardanza.slice(0, 5) }); })
-      .catch(() => {});
+  const cargarConfig = useCallback(async (actualizarForm: boolean) => {
+    try {
+      const r = await fetch('/api/configuracion/asistencia');
+      const d = await r.json();
+      if (r.ok && d) {
+        setConfig(d);
+        setEditForm({ inicio: d.inicio.slice(0, 5), limite_presente: d.limite_presente.slice(0, 5), limite_tardanza: d.limite_tardanza.slice(0, 5) });
+      }
+    } catch {}
   }, []);
+
+  useEffect(() => {
+    cargarConfig(true);
+
+    const supabase = createClient();
+    const canal = supabase
+      .channel('configuracion-cambios')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'configuracion_asistencia' }, () => cargarConfig(false))
+      .subscribe();
+
+    return () => { supabase.removeChannel(canal); };
+  }, [cargarConfig]);
 
   const handleSaveConfig = async () => {
     setConfigError('');

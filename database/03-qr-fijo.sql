@@ -29,6 +29,11 @@ BEGIN
     RETURN jsonb_build_object('exito', FALSE, 'codigo', 'NO_AUTORIZADO', 'mensaje', 'Solo un brigadier activo puede registrar asistencia');
   END IF;
 
+  IF extract(isodow FROM CURRENT_DATE) >= 6
+     OR EXISTS (SELECT 1 FROM public.dias_no_laborables WHERE fecha = CURRENT_DATE) THEN
+    RETURN jsonb_build_object('exito', FALSE, 'codigo', 'DIA_NO_LABORABLE', 'mensaje', 'No se puede registrar asistencia en un día no laborable');
+  END IF;
+
   v_hora := CURRENT_TIME;
   SELECT inicio, limite_tardanza INTO v_inicio, v_limite_tardanza
   FROM public.configuracion_asistencia WHERE id = 1;
