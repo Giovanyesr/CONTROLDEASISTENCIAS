@@ -23,7 +23,11 @@ export function QRScanner({ onScan, onError }: QRScannerProps) {
         const cams = devices.map((d) => ({ id: d.id, label: d.label || `Cámara ${d.id}` }));
         setCameras(cams);
         if (cams.length > 0) {
-          setSelectedCamera(cams[0].id);
+          const preferencia = ['back', 'environment', 'rear', 'trasera', 'posterior'];
+          const trasera = cams.find(c =>
+            preferencia.some(p => c.label.toLowerCase().includes(p))
+          );
+          setSelectedCamera(trasera?.id || cams[0].id);
         }
       })
       .catch(() => {});
