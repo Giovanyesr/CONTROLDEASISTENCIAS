@@ -31,6 +31,18 @@ export async function PUT(request: Request) {
 
     if (errPerfil) return NextResponse.json({ error: errPerfil.message }, { status: 500 });
 
+    if (nuevo_rol === 'brigadier') {
+      const { error: errRol } = await supabase
+        .from('roles_funcionales')
+        .upsert({ perfil_id: usuario_id, rol: 'brigadier', activo: true }, { onConflict: 'perfil_id,rol' });
+      if (errRol) return NextResponse.json({ error: errRol.message }, { status: 500 });
+    } else {
+      const { error: errRol } = await supabase
+        .from('roles_funcionales')
+        .upsert({ perfil_id: usuario_id, rol: 'brigadier', activo: false }, { onConflict: 'perfil_id,rol' });
+      if (errRol) return NextResponse.json({ error: errRol.message }, { status: 500 });
+    }
+
     return NextResponse.json({ success: true, rol: nuevo_rol });
   } catch {
     return NextResponse.json({ error: 'Error interno' }, { status: 500 });
