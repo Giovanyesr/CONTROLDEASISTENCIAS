@@ -1,10 +1,10 @@
-const CACHE = 'asistencia-v2';
+const CACHE = 'asistencia-v3';
 const STATIC = [
   '/offline.html',
   '/manifest.json',
-  '/icons/icon-192.svg',
-  '/icons/icon-512.svg',
-  '/favicon.svg',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
+  '/icons/apple-touch-icon.png',
 ];
 
 self.addEventListener('install', (e) => {

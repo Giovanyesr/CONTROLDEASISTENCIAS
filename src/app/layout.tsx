@@ -20,8 +20,8 @@ export const metadata: Metadata = {
   description: 'Sistema de control de asistencia escolar - I.E. 30916 San Francisco de Asís',
   manifest: '/manifest.json',
   icons: {
-    icon: '/favicon.svg',
-    apple: '/favicon.svg',
+    icon: '/icons/icon-192.png',
+    apple: '/icons/apple-touch-icon.png',
   },
   appleWebApp: {
     capable: true,
