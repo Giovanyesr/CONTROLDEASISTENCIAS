@@ -79,6 +79,9 @@ export default function AdminPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<any>(null);
   const [editForm, setEditForm] = useState<any>({ nombres: '', apellidos: '', celular: '', genero: '', estado: '', grado: '', seccion: '' });
+  const [editAsignaciones, setEditAsignaciones] = useState<{ id?: string; grado: string; seccion: string }[]>([]);
+  const [editGrado, setEditGrado] = useState('');
+  const [editSeccion, setEditSeccion] = useState('');
 
   // Tutor assignment
   const [tutorAssignOpen, setTutorAssignOpen] = useState(false);
@@ -177,6 +180,20 @@ export default function AdminPage() {
         body: JSON.stringify({ id: editTarget.id, ...editForm }),
       });
       if (!res.ok) { const err = await res.json(); throw new Error(err.error); }
+
+      if (activeTab === 'tutor') {
+        for (const a of editAsignaciones) {
+          if (!a.id) {
+            const r = await fetch('/api/tutores/asignar', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ tutor_id: editTarget.id, asignaciones: [{ grado: a.grado, seccion: a.seccion }] }),
+            });
+            if (!r.ok) { const err = await r.json(); toast.error(err.error); }
+          }
+        }
+      }
+
       toast.success('Usuario actualizado correctamente');
       setEditOpen(false);
       fetchResumen();
@@ -245,7 +262,11 @@ export default function AdminPage() {
       });
       if (!res.ok) { const err = await res.json(); throw new Error(err.error); }
       toast.success('Asignacion eliminada');
-      fetchTutorAsignaciones(assignTutorId!);
+      if (assignTutorId) fetchTutorAsignaciones(assignTutorId);
+      if (editTarget) {
+        const r = await fetch(`/api/tutores/asignar?tutor_id=${editTarget.id}`);
+        if (r.ok) setEditAsignaciones(await r.json());
+      }
       fetchUsers(activeTab);
     } catch (err: any) { toast.error(err.message); }
   };
@@ -455,7 +476,20 @@ export default function AdminPage() {
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="w-48 rounded-xl">
-                                  <DropdownMenuItem className="gap-2 rounded-lg" onClick={() => { setEditTarget(u); setEditForm({ nombres: u.nombres, apellidos: u.apellidos, celular: u.celular || '', genero: u.genero || '', estado: u.estado || 'activo', grado: u.alumno?.grado || '', seccion: u.alumno?.seccion || '' }); setEditOpen(true); }}>
+                                  <DropdownMenuItem className="gap-2 rounded-lg" onClick={async () => {
+                                    setEditTarget(u);
+                                    setEditForm({ nombres: u.nombres, apellidos: u.apellidos, celular: u.celular || '', genero: u.genero || '', estado: u.estado || 'activo', grado: u.alumno?.grado || '', seccion: u.alumno?.seccion || '' });
+                                    if (activeTab === 'tutor') {
+                                      const res = await fetch(`/api/tutores/asignar?tutor_id=${u.id}`);
+                                      if (res.ok) setEditAsignaciones(await res.json());
+                                      else setEditAsignaciones([]);
+                                    } else {
+                                      setEditAsignaciones([]);
+                                    }
+                                    setEditGrado('');
+                                    setEditSeccion('');
+                                    setEditOpen(true);
+                                  }}>
                                     <Pencil className="h-4 w-4" /> Editar
                                   </DropdownMenuItem>
                                   <DropdownMenuItem className="gap-2 rounded-lg" onClick={() => handleToggleEstado(u)}>
@@ -632,7 +666,7 @@ export default function AdminPage() {
                 <option value="inactivo">Inactivo</option>
               </select>
             </div>
-            {activeTab !== 'director' && (
+            {activeTab !== 'director' && activeTab !== 'tutor' && (
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Grado</Label>
@@ -644,7 +678,7 @@ export default function AdminPage() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Sección</Label>
+                  <Label>Seccion</Label>
                   <Select value={editForm.seccion} onValueChange={(v) => setEditForm({ ...editForm, seccion: v })}>
                     <SelectTrigger className="rounded-lg"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
                     <SelectContent>
@@ -652,6 +686,51 @@ export default function AdminPage() {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+            )}
+            {activeTab === 'tutor' && (
+              <div className="space-y-3">
+                <Label className="text-xs text-muted-foreground">Grados asignados ({editAsignaciones.length}/3)</Label>
+                {editAsignaciones.map((a) => (
+                  <div key={a.id || `${a.grado}-${a.seccion}`} className="flex items-center justify-between rounded-lg border bg-muted/30 px-3 py-2">
+                    <span className="text-sm font-medium">{a.grado} · {a.seccion}</span>
+                    <Button type="button" variant="ghost" size="sm" className="h-7 w-7 rounded-lg text-red-500 hover:bg-red-50 hover:text-red-600" onClick={() => {
+                      if (a.id) {
+                        handleRemoveAsignacion(a.id);
+                      } else {
+                        setEditAsignaciones(editAsignaciones.filter((x) => !(x.grado === a.grado && x.seccion === a.seccion)));
+                      }
+                    }}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                ))}
+                {editAsignaciones.length < 3 && (
+                  <div className="flex gap-2">
+                    <Select value={editGrado} onValueChange={setEditGrado}>
+                      <SelectTrigger className="h-9 rounded-lg w-32"><SelectValue placeholder="Grado" /></SelectTrigger>
+                      <SelectContent>
+                        {gradosDisponibles.filter(g => !editAsignaciones.some(a => a.grado === g)).map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <Select value={editSeccion} onValueChange={setEditSeccion}>
+                      <SelectTrigger className="h-9 rounded-lg w-28"><SelectValue placeholder="Seccion" /></SelectTrigger>
+                      <SelectContent>
+                        {seccionesDisponibles.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <Button type="button" variant="outline" size="sm" className="h-9 rounded-lg gap-1" disabled={!editGrado || !editSeccion}
+                      onClick={() => {
+                        if (editGrado && editSeccion && !editAsignaciones.some(a => a.grado === editGrado && a.seccion === editSeccion)) {
+                          setEditAsignaciones([...editAsignaciones, { grado: editGrado, seccion: editSeccion }]);
+                          setEditGrado('');
+                          setEditSeccion('');
+                        }
+                      }}>
+                      <Plus className="h-3.5 w-3.5" /> Agregar
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </div>
