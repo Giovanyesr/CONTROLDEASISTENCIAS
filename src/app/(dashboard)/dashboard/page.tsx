@@ -87,6 +87,7 @@ export default function DashboardPage() {
   const [confirmCerrarOpen, setConfirmCerrarOpen] = useState(false);
   const [fechaRegistro, setFechaRegistro] = useState<string | null>(null);
   const [institucional, setInstitucional] = useState<any>(null);
+  const [porGrado, setPorGrado] = useState<Record<string, { presentes: number; tardanzas: number; faltas: number; total: number }>>({});
 
   const [noLaborables, setNoLaborables] = useState<Set<string>>(new Set());
 
@@ -147,6 +148,24 @@ export default function DashboardPage() {
           injustificadas: contar('falta_injustificada'),
           recientes: registros.slice(0, 10),
         });
+
+        const { data: alumnosData } = await supabase
+          .from('alumnos')
+          .select('perfil_id, grado, seccion');
+        const gradoMap: Record<string, string> = {};
+        (alumnosData || []).forEach((a: any) => { gradoMap[a.perfil_id] = a.grado; });
+
+        const gradoStats: Record<string, { presentes: number; tardanzas: number; faltas: number; total: number }> = {};
+        registros.forEach((r: any) => {
+          const grado = gradoMap[r.alumno_id] || 'Sin grado';
+          if (!gradoStats[grado]) gradoStats[grado] = { presentes: 0, tardanzas: 0, faltas: 0, total: 0 };
+          gradoStats[grado].total++;
+          if (r.estado === 'presente') gradoStats[grado].presentes++;
+          else if (r.estado === 'tardanza') gradoStats[grado].tardanzas++;
+          else gradoStats[grado].faltas++;
+        });
+        setPorGrado(gradoStats);
+
         return;
       }
 
@@ -289,6 +308,33 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         </div>
+
+        {Object.keys(porGrado).length > 0 && (
+          <Card className="shadow-card">
+            <CardHeader><CardTitle className="flex items-center gap-2 text-lg"><GraduationCap className="h-5 w-5 text-primary" />Asistencia por Grado - Hoy</CardTitle></CardHeader>
+            <CardContent>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {Object.entries(porGrado).sort(([a], [b]) => a.localeCompare(b)).map(([grado, stats]) => {
+                  const pct = stats.total > 0 ? Math.round(((stats.presentes + stats.tardanzas) / stats.total) * 100) : 0;
+                  return (
+                    <div key={grado} className="rounded-xl border p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <p className="font-semibold text-foreground">{grado}</p>
+                        <span className={`text-sm font-bold ${pct >= 80 ? 'text-green-600' : pct >= 60 ? 'text-amber-600' : 'text-red-600'}`}>{pct}%</span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-green-500 transition-all" style={{ width: `${pct}%` }} /></div>
+                      <div className="flex gap-3 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-green-500" />{stats.presentes} P</span>
+                        <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-amber-400" />{stats.tardanzas} T</span>
+                        <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-500" />{stats.faltas} F</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     );
   }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,8 +26,12 @@ export default function HistorialPage() {
   const [search, setSearch] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('');
   const [filtroGrado, setFiltroGrado] = useState('');
+  const [filtroSeccion, setFiltroSeccion] = useState('');
   const [filtroMes, setFiltroMes] = useState(getPeruCalendarDate().getMonth().toString());
   const [filtroAno, setFiltroAno] = useState(getPeruCalendarDate().getFullYear().toString());
+  const [filtroPeriodo, setFiltroPeriodo] = useState('mes');
+  const [semanaInicio, setSemanaInicio] = useState('');
+  const [semanaFin, setSemanaFin] = useState('');
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
   const [total, setTotal] = useState(0);
@@ -131,6 +135,8 @@ export default function HistorialPage() {
     fetchJustInfo();
   }, [diaOpen, diaSeleccionado]);
 
+  const esDirector = user?.rol === 'director';
+
   const fetchHistorial = useCallback(async (signal: AbortSignal) => {
     try {
       let query = supabase
@@ -155,7 +161,20 @@ export default function HistorialPage() {
         }
       }
 
-      if (filtroMes) {
+      if (filtroSeccion && esDirector) {
+        const { data: secIds } = await supabase
+          .from('alumnos')
+          .select('perfil_id')
+          .eq('seccion', filtroSeccion);
+        const ids = (secIds || []).map(a => a.perfil_id);
+        if (ids.length > 0) {
+          query = query.in('alumno_id', ids);
+        }
+      }
+
+      if (filtroPeriodo === 'semana' && semanaInicio && semanaFin) {
+        query = query.gte('fecha', semanaInicio).lte('fecha', semanaFin);
+      } else if (filtroPeriodo === 'mes' && filtroMes) {
         const mes = parseInt(filtroMes) + 1;
         query = query.gte('fecha', `${filtroAno}-${mes.toString().padStart(2, '0')}-01`);
         const ultimoDia = new Date(parseInt(filtroAno), parseInt(filtroMes) + 1, 0).getDate();
@@ -166,7 +185,7 @@ export default function HistorialPage() {
         query = query.eq('estado', filtroEstado);
       }
 
-      if (!esBrigadier) {
+      if (!esBrigadier && !esDirector) {
         query = query.eq('alumno_id', user?.id);
       }
 
@@ -209,7 +228,7 @@ export default function HistorialPage() {
     } finally {
       if (!signal.aborted) setLoading(false);
     }
-  }, [filtroEstado, filtroGrado, filtroMes, filtroAno, page, user, esBrigadier]);
+  }, [filtroEstado, filtroGrado, filtroSeccion, filtroMes, filtroAno, filtroPeriodo, semanaInicio, semanaFin, page, user, esBrigadier, esDirector]);
 
   useEffect(() => {
     const abortController = new AbortController();
@@ -217,9 +236,19 @@ export default function HistorialPage() {
     return () => abortController.abort();
   }, [fetchHistorial]);
 
+  const registrosFiltrados = useMemo(() => {
+    if (!search) return registros;
+    const s = search.toLowerCase();
+    return registros.filter((r: any) =>
+      r.alumno?.nombres?.toLowerCase().includes(s) ||
+      r.alumno?.apellidos?.toLowerCase().includes(s) ||
+      r.alumno?.dni?.includes(s)
+    );
+  }, [registros, search]);
+
   const buildExportRows = useCallback(() => {
-    if (esBrigadier) {
-      return registros.map((r) => ({
+    if (esBrigadier || esDirector) {
+      return registrosFiltrados.map((r) => ({
         DNI: r.alumno?.dni || '',
         Estudiante: `${r.alumno?.nombres || ''} ${r.alumno?.apellidos || ''}`,
         Fecha: r.fecha,
@@ -251,7 +280,7 @@ export default function HistorialPage() {
       });
     }
     return rows;
-  }, [esBrigadier, registros, mesAsistencias, filtroMes, filtroAno, user, fechaRegistro]);
+  }, [esBrigadier, esDirector, registrosFiltrados, registros, mesAsistencias, filtroMes, filtroAno, user, fechaRegistro]);
 
   const exportToPDF = useCallback(() => {
     const rows = buildExportRows();
@@ -279,7 +308,7 @@ export default function HistorialPage() {
   }, [buildExportRows]);
 
   const totalPages = Math.ceil(total / pageSize);
-  const colSpan = esBrigadier ? 6 : 4;
+  const colSpan = (esBrigadier || esDirector) ? 6 : 4;
   const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Setiembre', 'Octubre', 'Noviembre', 'Diciembre'];
   const anos = Array.from({ length: 5 }, (_, i) => getPeruCalendarDate().getFullYear() - i);
 
@@ -305,7 +334,7 @@ export default function HistorialPage() {
       <Card className="shadow-card">
         <CardHeader className="pb-0">
           <div className="flex flex-col gap-3 sm:flex-row">
-            {esBrigadier && (
+            {(esBrigadier || esDirector) && (
               <div className="relative flex-1">
                 <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -316,7 +345,7 @@ export default function HistorialPage() {
                 />
               </div>
             )}
-            {esBrigadier && (
+            {(esBrigadier || esDirector) && (
               <Select value={filtroGrado} onValueChange={(v) => { setFiltroGrado(v); setPage(0); }}>
                 <SelectTrigger className="h-10 w-full rounded-xl border-border sm:w-28">
                   <SelectValue placeholder="Grado" />
@@ -331,22 +360,66 @@ export default function HistorialPage() {
                 </SelectContent>
               </Select>
             )}
-            <Select value={filtroMes} onValueChange={(v) => { setFiltroMes(v); setPage(0); }}>
-              <SelectTrigger className="h-10 w-full rounded-xl border-border sm:w-36">
-                <SelectValue placeholder="Mes" />
+            {esDirector && (
+              <Select value={filtroSeccion} onValueChange={(v) => { setFiltroSeccion(v); setPage(0); }}>
+                <SelectTrigger className="h-10 w-full rounded-xl border-border sm:w-28">
+                  <SelectValue placeholder="Sección" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Todas</SelectItem>
+                  <SelectItem value="Única">Única</SelectItem>
+                  <SelectItem value="A">Sección A</SelectItem>
+                  <SelectItem value="B">Sección B</SelectItem>
+                  <SelectItem value="C">Sección C</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+            <Select value={filtroPeriodo} onValueChange={(v) => { setFiltroPeriodo(v); setPage(0); }}>
+              <SelectTrigger className="h-10 w-full rounded-xl border-border sm:w-32">
+                <SelectValue placeholder="Período" />
               </SelectTrigger>
               <SelectContent>
-                {meses.map((m, i) => <SelectItem key={i} value={i.toString()}>{m}</SelectItem>)}
+                <SelectItem value="mes">Mes</SelectItem>
+                <SelectItem value="semana">Semana</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={filtroAno} onValueChange={(v) => { setFiltroAno(v); setPage(0); }}>
-              <SelectTrigger className="h-10 w-full rounded-xl border-border sm:w-28">
-                <SelectValue placeholder="Año" />
-              </SelectTrigger>
-              <SelectContent>
-                {anos.map((a) => <SelectItem key={a} value={a.toString()}>{a}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            {filtroPeriodo === 'semana' ? (
+              <>
+                <Input
+                  type="date"
+                  value={semanaInicio}
+                  onChange={(e) => { setSemanaInicio(e.target.value); setPage(0); }}
+                  className="h-10 rounded-xl border-border sm:w-40"
+                  placeholder="Desde"
+                />
+                <Input
+                  type="date"
+                  value={semanaFin}
+                  onChange={(e) => { setSemanaFin(e.target.value); setPage(0); }}
+                  className="h-10 rounded-xl border-border sm:w-40"
+                  placeholder="Hasta"
+                />
+              </>
+            ) : (
+              <>
+                <Select value={filtroMes} onValueChange={(v) => { setFiltroMes(v); setPage(0); }}>
+                  <SelectTrigger className="h-10 w-full rounded-xl border-border sm:w-36">
+                    <SelectValue placeholder="Mes" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {meses.map((m, i) => <SelectItem key={i} value={i.toString()}>{m}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Select value={filtroAno} onValueChange={(v) => { setFiltroAno(v); setPage(0); }}>
+                  <SelectTrigger className="h-10 w-full rounded-xl border-border sm:w-28">
+                    <SelectValue placeholder="Año" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {anos.map((a) => <SelectItem key={a} value={a.toString()}>{a}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </>
+            )}
             <Select value={filtroEstado} onValueChange={(v) => { setFiltroEstado(v); setPage(0); }}>
               <SelectTrigger className="h-10 w-full rounded-xl border-border sm:w-40">
                 <SelectValue placeholder="Estado" />
@@ -367,7 +440,7 @@ export default function HistorialPage() {
               <Loader2 className="h-5 w-5 animate-spin text-primary" />
               <span className="text-sm text-muted-foreground">Cargando...</span>
             </div>
-          ) : !esBrigadier ? (
+          ) : !(esBrigadier || esDirector) ? (
             <div className="space-y-4">
               <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                 <Calendar className="h-5 w-5 text-primary" />
@@ -435,7 +508,7 @@ export default function HistorialPage() {
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {registros.length === 0 ? (
+                  {registrosFiltrados.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={6}>
                         <div className="flex flex-col items-center gap-2 py-8 text-center">
@@ -445,7 +518,7 @@ export default function HistorialPage() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    registros.map((r) => (
+                    registrosFiltrados.map((r) => (
                       <TableRow key={r.id} className="transition-colors hover:bg-muted/30">
                         <TableCell className="font-medium text-foreground">{r.alumno?.dni}</TableCell>
                         <TableCell className="text-muted-foreground">{r.alumno?.nombres} {r.alumno?.apellidos}</TableCell>
@@ -473,7 +546,7 @@ export default function HistorialPage() {
             </div>
           )}
 
-              {esBrigadier && totalPages > 1 && (
+              {(esBrigadier || esDirector) && totalPages > 1 && (
             <div className="flex items-center justify-between pt-4 animate-fade-in">
               <p className="text-sm text-muted-foreground">
                 Página {page + 1} de {totalPages}

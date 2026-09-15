@@ -19,6 +19,8 @@ import {
   UserCog,
   LayoutGrid,
   Bell,
+  BarChart3,
+  AlertTriangle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
@@ -29,6 +31,8 @@ import { useNotificaciones } from '@/hooks/useNotificaciones';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['director', 'tutor', 'brigadier', 'alumno'] },
+  { href: '/estadisticas', label: 'Estadísticas', icon: BarChart3, roles: ['director'] },
+  { href: '/incidencias', label: 'Incidencias', icon: AlertTriangle, roles: ['director', 'tutor', 'brigadier'] },
   { href: '/admin', label: 'Panel Admin', icon: LayoutGrid, roles: ['admin'] },
   { href: '/escaner', label: 'Escáner QR', icon: QrCode, roles: ['brigadier'] },
   { href: '/estudiantes', label: 'Estudiantes', icon: Users, roles: ['admin', 'director', 'tutor', 'brigadier'] },
