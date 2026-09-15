@@ -18,7 +18,7 @@ export async function GET(request: Request) {
       { cookies: { getAll: () => [], setAll: () => {} } }
     );
 
-    let query = supabase.from('perfiles').select('*, alumno:alumnos(*), roles_funcionales(rol, activo)').order('apellidos', { ascending: true });
+    let query = supabase.from('perfiles').select('*, alumno:alumnos(*), roles_funcionales(rol, activo), asignaciones:tutor_asignaciones(grado, seccion)').order('apellidos', { ascending: true });
     if (rol) query = query.eq('rol', rol);
     const { data, error } = await query;
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
