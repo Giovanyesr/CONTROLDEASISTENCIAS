@@ -21,6 +21,9 @@ import {
   Bell,
   BarChart3,
   AlertTriangle,
+  BookOpen,
+  BellRing,
+  ClipboardCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
@@ -32,6 +35,9 @@ import { useNotificaciones } from '@/hooks/useNotificaciones';
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['director', 'tutor', 'brigadier', 'alumno'] },
   { href: '/estadisticas', label: 'Estadísticas', icon: BarChart3, roles: ['director'] },
+  { href: '/comportamiento', label: 'Comportamiento', icon: ClipboardCheck, roles: ['tutor', 'director'] },
+  { href: '/agenda', label: 'Agenda Digital', icon: BookOpen, roles: ['tutor', 'director'] },
+  { href: '/llamadas-atencion', label: 'Llamadas de Atención', icon: BellRing, roles: ['tutor', 'director', 'brigadier'] },
   { href: '/incidencias', label: 'Incidencias', icon: AlertTriangle, roles: ['director', 'tutor', 'brigadier'] },
   { href: '/admin', label: 'Panel Admin', icon: LayoutGrid, roles: ['admin'] },
   { href: '/escaner', label: 'Escáner QR', icon: QrCode, roles: ['brigadier'] },

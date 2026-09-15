@@ -26,6 +26,7 @@ import {
   ChevronRight,
   User,
   GraduationCap,
+  AlertCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -79,6 +80,7 @@ export default function DashboardPage() {
   const esBrigadier = user?.rol === 'brigadier' || user?.es_brigadier === true;
   const esEstudiante = user?.rol === 'alumno' || user?.rol === 'brigadier';
   const esDirector = user?.rol === 'director';
+  const esTutor = user?.rol === 'tutor';
 
   const [mesAsistencias, setMesAsistencias] = useState<Record<string, string>>({});
   const [diaSeleccionado, setDiaSeleccionado] = useState<{ fecha: string; estado?: string; hora?: string; brigadier_nombre?: string } | null>(null);
@@ -88,6 +90,8 @@ export default function DashboardPage() {
   const [fechaRegistro, setFechaRegistro] = useState<string | null>(null);
   const [institucional, setInstitucional] = useState<any>(null);
   const [porGrado, setPorGrado] = useState<Record<string, { presentes: number; tardanzas: number; faltas: number; total: number }>>({});
+  const [tutorData, setTutorData] = useState<any>(null);
+  const [tutorAlumnos, setTutorAlumnos] = useState<any[]>([]);
 
   const [noLaborables, setNoLaborables] = useState<Set<string>>(new Set());
 
@@ -166,6 +170,81 @@ export default function DashboardPage() {
         });
         setPorGrado(gradoStats);
 
+        return;
+      }
+
+      if (esTutor && user?.id) {
+        const { data: asignacion } = await supabase
+          .from('tutor_asignaciones')
+          .select('seccion, grado')
+          .eq('tutor_id', user.id)
+          .maybeSingle();
+
+        if (asignacion) {
+          const { data: alumnosGrado } = await supabase
+            .from('alumnos')
+            .select('perfil_id, grado, seccion')
+            .eq('grado', asignacion.grado)
+            .eq('seccion', asignacion.seccion);
+
+          const ids = (alumnosGrado || []).map((a: any) => a.perfil_id);
+          const alumnoInfoMap: Record<string, any> = {};
+          (alumnosGrado || []).forEach((a: any) => { alumnoInfoMap[a.perfil_id] = a; });
+
+          if (ids.length > 0) {
+            const hoy = getPeruDate();
+            const { data: asistenciasHoy } = await supabase
+              .from('asistencias')
+              .select('alumno_id, estado, hora, alumno:perfiles!asistencias_alumno_id_fkey(nombres, apellidos, dni)')
+              .in('alumno_id', ids)
+              .eq('fecha', hoy);
+
+            const conteo = { presentes: 0, tardanzas: 0, faltas: 0, total: ids.length };
+            const registrosHoy = asistenciasHoy || [];
+            registrosHoy.forEach((r: any) => {
+              if (r.estado === 'presente') conteo.presentes++;
+              else if (r.estado === 'tardanza') conteo.tardanzas++;
+              else conteo.faltas++;
+            });
+
+            const faltantes = ids
+              .filter(id => !registrosHoy.some((r: any) => r.alumno_id === id))
+              .map(id => {
+                const info = alumnoInfoMap[id];
+                return { id, nombre: `${info?.perfil_id || id}`, dni: '—' };
+              });
+
+            const { data: perfilesData } = await supabase
+              .from('perfiles')
+              .select('id, nombres, apellidos, dni')
+              .in('id', ids);
+            const perfilMap: Record<string, any> = {};
+            (perfilesData || []).forEach((p: any) => { perfilMap[p.id] = p; });
+
+            const alumnosConEstado = ids.map(id => {
+              const registro = registrosHoy.find((r: any) => r.alumno_id === id);
+              const perfil = perfilMap[id];
+              return {
+                id,
+                nombre: perfil ? `${perfil.apellidos} ${perfil.nombres}` : id,
+                dni: perfil?.dni || '—',
+                estado: registro?.estado || 'falta_injustificada',
+                hora: registro?.hora,
+              };
+            });
+
+            setTutorAlumnos(alumnosConEstado);
+            setTutorData({
+              grado: asignacion.grado,
+              seccion: asignacion.seccion,
+              totalAlumnos: ids.length,
+              presentes: conteo.presentes,
+              tardanzas: conteo.tardanzas,
+              faltas: conteo.faltas,
+              faltantes,
+            });
+          }
+        }
         return;
       }
 
@@ -335,6 +414,90 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         )}
+      </div>
+    );
+  }
+
+  if (esTutor && tutorData) {
+    const pctAsistencia = tutorData.totalAlumnos > 0
+      ? Math.round(((tutorData.presentes + tutorData.tardanzas) / tutorData.totalAlumnos) * 100)
+      : 0;
+
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-sm font-medium uppercase tracking-wider text-primary">Panel del Asesor</p>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+              {tutorData.grado} Grado - Sección {tutorData.seccion}
+            </h1>
+            <p className="mt-1 text-sm capitalize text-muted-foreground">{dateStr}</p>
+          </div>
+          <Badge variant="outline" className="w-fit rounded-lg px-3 py-1.5 text-green-700">Tutor de sección</Badge>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Card className="shadow-card"><CardContent className="p-5"><div className="flex items-center justify-between"><div><p className="text-2xl font-bold text-foreground">{tutorData.totalAlumnos}</p><p className="text-xs font-medium text-muted-foreground">Total alumnos</p></div><div className="flex h-11 w-11 items-center justify-center rounded-xl bg-sky-100"><Users className="h-5 w-5 text-sky-600" /></div></div></CardContent></Card>
+          <Card className="shadow-card"><CardContent className="p-5"><div className="flex items-center justify-between"><div><p className="text-2xl font-bold text-green-600">{tutorData.presentes}</p><p className="text-xs font-medium text-muted-foreground">Presentes hoy</p></div><div className="flex h-11 w-11 items-center justify-center rounded-xl bg-green-100"><CheckCircle2 className="h-5 w-5 text-green-600" /></div></div></CardContent></Card>
+          <Card className="shadow-card"><CardContent className="p-5"><div className="flex items-center justify-between"><div><p className="text-2xl font-bold text-amber-600">{tutorData.tardanzas}</p><p className="text-xs font-medium text-muted-foreground">Tardanzas hoy</p></div><div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-100"><Clock className="h-5 w-5 text-amber-600" /></div></div></CardContent></Card>
+          <Card className="shadow-card"><CardContent className="p-5"><div className="flex items-center justify-between"><div><p className="text-2xl font-bold text-red-600">{tutorData.faltas}</p><p className="text-xs font-medium text-muted-foreground">Faltas hoy</p></div><div className="flex h-11 w-11 items-center justify-center rounded-xl bg-red-100"><XCircle className="h-5 w-5 text-red-600" /></div></div></CardContent></Card>
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Card className="shadow-card">
+            <CardHeader><CardTitle className="flex items-center gap-2 text-lg"><Activity className="h-5 w-5 text-primary" />Asistencia de hoy</CardTitle></CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between mb-3"><span className="text-sm text-muted-foreground">Porcentaje asistencia</span><span className={`text-2xl font-bold ${pctAsistencia >= 80 ? 'text-green-600' : pctAsistencia >= 60 ? 'text-amber-600' : 'text-red-600'}`}>{pctAsistencia}%</span></div>
+              <div className="h-3 overflow-hidden rounded-full bg-muted mb-4"><div className="h-full rounded-full bg-green-500 transition-all" style={{ width: `${Math.min(pctAsistencia, 100)}%` }} /></div>
+              <div className="grid grid-cols-3 gap-2 text-sm">
+                <div className="rounded-xl bg-green-50 p-3 text-center"><p className="text-lg font-bold text-green-700">{tutorData.presentes}</p><p className="text-xs text-green-600">Presentes</p></div>
+                <div className="rounded-xl bg-amber-50 p-3 text-center"><p className="text-lg font-bold text-amber-700">{tutorData.tardanzas}</p><p className="text-xs text-amber-600">Tardanzas</p></div>
+                <div className="rounded-xl bg-red-50 p-3 text-center"><p className="text-lg font-bold text-red-700">{tutorData.faltas}</p><p className="text-xs text-red-600">Faltas</p></div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-card">
+            <CardHeader><CardTitle className="flex items-center gap-2 text-lg"><Users className="h-5 w-5 text-primary" />Lista de alumnos</CardTitle></CardHeader>
+            <CardContent className="space-y-2 max-h-[400px] overflow-y-auto">
+              {tutorAlumnos.map((alumno: any) => (
+                <div key={alumno.id} className="flex items-center justify-between rounded-xl border p-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{alumno.nombre}</p>
+                    <p className="text-xs text-muted-foreground">DNI {alumno.dni}</p>
+                  </div>
+                  <Badge variant={alumno.estado === 'presente' ? 'default' : alumno.estado === 'tardanza' ? 'secondary' : 'destructive'} className="rounded-md">
+                    {alumno.estado === 'presente' ? 'Presente' : alumno.estado === 'tardanza' ? 'Tardanza' : 'Falta'}
+                  </Badge>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card className="shadow-card">
+          <CardHeader><CardTitle className="flex items-center gap-2 text-lg"><AlertCircle className="h-5 w-5 text-red-500" />Alumnos faltantes hoy</CardTitle></CardHeader>
+          <CardContent>
+            {tutorData.faltantes.length === 0 ? (
+              <div className="flex flex-col items-center gap-2 py-8 text-center">
+                <CheckCircle2 className="h-8 w-8 text-green-500" />
+                <p className="text-sm font-medium text-green-600">Todos los alumnos asistieron hoy</p>
+              </div>
+            ) : (
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {tutorData.faltantes.map((f: any) => (
+                  <div key={f.id} className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 p-3">
+                    <XCircle className="h-4 w-4 text-red-500 shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{f.nombre}</p>
+                      <p className="text-xs text-muted-foreground">DNI {f.dni}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     );
   }
