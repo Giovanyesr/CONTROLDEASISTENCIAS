@@ -64,7 +64,6 @@ export default function GradoPage() {
 
   const [estudiantes, setEstudiantes] = useState<any[]>([]);
   const [asistencias, setAsistencias] = useState<Record<string, any[]>>({});
-  const [last5Days, setLast5Days] = useState<string[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
@@ -135,6 +134,20 @@ export default function GradoPage() {
 
   const normalizeGrado = (g: string) => gradosMap[g.replace(/[^\d]/g, '')] || g;
 
+  const last5Days = useMemo(() => {
+    const days: string[] = [];
+    const cursor = new Date(peruNow);
+    while (days.length < 5) {
+      const d = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}-${String(cursor.getDate()).padStart(2, '0')}`;
+      if (esLaborable(d)) {
+        days.push(d);
+      }
+      cursor.setDate(cursor.getDate() - 1);
+    }
+    days.reverse();
+    return days;
+  }, [noLaborables]);
+
   const fetchPersonas = useCallback(async () => {
     const { data: perfiles } = await supabase
       .from('perfiles')
@@ -173,17 +186,7 @@ export default function GradoPage() {
         lookup[r.alumno_id][r.fecha] = r;
       });
 
-      const last5Days: string[] = [];
       const todayStr = getPeruDate();
-      const cursor = new Date(peruNow);
-      while (last5Days.length < 5) {
-        const d = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}-${String(cursor.getDate()).padStart(2, '0')}`;
-        if (esLaborable(d)) {
-          last5Days.push(d);
-        }
-        cursor.setDate(cursor.getDate() - 1);
-      }
-      last5Days.reverse();
 
       asistenciasMap = Object.fromEntries(
         ids.map(id => {
@@ -201,8 +204,7 @@ export default function GradoPage() {
 
     setEstudiantes(filtered);
     setAsistencias(asistenciasMap);
-    setLast5Days(last5Days);
-  }, [gradoLabel, tutorSection]);
+  }, [gradoLabel, tutorSection, last5Days]);
 
   useEffect(() => {
     const load = async () => {
