@@ -211,17 +211,21 @@ export default function GradoPage() {
       setLoading(true);
 
       if (currentUser?.rol === 'tutor') {
-        const { data } = await supabase
+        const { data: asignaciones } = await supabase
           .from('tutor_asignaciones')
           .select('seccion, grado')
-          .eq('tutor_id', currentUser.id)
-          .maybeSingle();
-        if (data) {
-          setTutorSection(data.seccion);
-          const num = data.grado.replace(/[^\d]/g, '');
-          if (num && num !== gradoId) {
-            router.replace(`/estudiantes/${num}`);
-            return;
+          .eq('tutor_id', currentUser.id);
+        if (asignaciones && asignaciones.length > 0) {
+          const matchGrado = asignaciones.find((a: any) => a.grado.replace(/[^\d]/g, '') === gradoId);
+          if (matchGrado) {
+            setTutorSection(matchGrado.seccion);
+          } else {
+            const first = asignaciones[0];
+            const num = first.grado.replace(/[^\d]/g, '');
+            if (num) {
+              router.replace(`/estudiantes/${num}`);
+              return;
+            }
           }
         }
       }

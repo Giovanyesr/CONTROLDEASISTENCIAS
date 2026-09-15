@@ -66,8 +66,7 @@ export default function ComportamientoPage() {
 
   const [bimestreActual, setBimestreActual] = useState(Math.ceil((getPeruCalendarDate().getMonth() + 1) / 3));
   const anoActual = getPeruCalendarDate().getFullYear();
-  const [tutorGrado, setTutorGrado] = useState('');
-  const [tutorSeccion, setTutorSeccion] = useState('');
+  const [tutorAsignaciones, setTutorAsignaciones] = useState<{ grado: string; seccion: string }[]>([]);
 
   const [reportOpen, setReportOpen] = useState(false);
   const [reportAlumno, setReportAlumno] = useState<any>(null);
@@ -79,11 +78,9 @@ export default function ComportamientoPage() {
         const { data } = await supabase
           .from('tutor_asignaciones')
           .select('grado, seccion')
-          .eq('tutor_id', user.id)
-          .maybeSingle();
-        if (data) {
-          setTutorGrado(data.grado);
-          setTutorSeccion(data.seccion);
+          .eq('tutor_id', user.id);
+        if (data && data.length > 0) {
+          setTutorAsignaciones(data);
         }
       }
     };
@@ -92,16 +89,23 @@ export default function ComportamientoPage() {
 
   const fetchData = useCallback(async () => {
     try {
-      const grado = esTutor ? tutorGrado : undefined;
-      if (!grado && esTutor) return;
-
-      let query = supabase
-        .from('alumnos')
-        .select('perfil_id, grado, seccion');
-      if (grado) {
-        query = query.eq('grado', grado);
+      let alumnosData: any[] = [];
+      if (esTutor && tutorAsignaciones.length > 0) {
+        for (const a of tutorAsignaciones) {
+          const { data } = await supabase
+            .from('alumnos')
+            .select('perfil_id, grado, seccion')
+            .eq('grado', a.grado)
+            .eq('seccion', a.seccion);
+          if (data) alumnosData = [...alumnosData, ...data];
+        }
+      } else if (!esTutor) {
+        const { data } = await supabase
+          .from('alumnos')
+          .select('perfil_id, grado, seccion');
+        if (data) alumnosData = data;
       }
-      const { data: alumnosData } = await query;
+      if (alumnosData.length === 0 && esTutor) { setLoading(false); return; }
       const ids = (alumnosData || []).map((a: any) => a.perfil_id);
       const alumnoInfoMap: Record<string, any> = {};
       (alumnosData || []).forEach((a: any) => { alumnoInfoMap[a.perfil_id] = a; });
@@ -176,11 +180,11 @@ export default function ComportamientoPage() {
     } finally {
       setLoading(false);
     }
-  }, [esTutor, tutorGrado, anoActual]);
+  }, [esTutor, tutorAsignaciones, anoActual]);
 
   useEffect(() => {
-    if (tutorGrado || !esTutor) fetchData();
-  }, [fetchData, tutorGrado, esTutor]);
+    if (tutorAsignaciones.length > 0 || !esTutor) fetchData();
+  }, [fetchData, tutorAsignaciones, esTutor]);
 
   const handleSaveNota = async (alumnoId: string) => {
     setSaving(true);

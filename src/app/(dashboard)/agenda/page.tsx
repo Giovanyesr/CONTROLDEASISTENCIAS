@@ -48,8 +48,7 @@ export default function AgendaPage() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedObs, setSelectedObs] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [tutorGrado, setTutorGrado] = useState('');
-  const [tutorSeccion, setTutorSeccion] = useState('');
+  const [tutorAsignaciones, setTutorAsignaciones] = useState<{ grado: string; seccion: string }[]>([]);
 
   const [form, setForm] = useState({
     alumno_dni: '',
@@ -65,11 +64,9 @@ export default function AgendaPage() {
         const { data } = await supabase
           .from('tutor_asignaciones')
           .select('grado, seccion')
-          .eq('tutor_id', user.id)
-          .maybeSingle();
-        if (data) {
-          setTutorGrado(data.grado);
-          setTutorSeccion(data.seccion);
+          .eq('tutor_id', user.id);
+        if (data && data.length > 0) {
+          setTutorAsignaciones(data);
         }
       }
     };
@@ -83,8 +80,9 @@ export default function AgendaPage() {
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (esTutor && tutorGrado) {
-        query = query.eq('grado', tutorGrado);
+      if (esTutor && tutorAsignaciones.length > 0) {
+        const grados = [...new Set(tutorAsignaciones.map(a => a.grado))];
+        query = query.in('grado', grados);
       } else if (!esDirector) {
         query = query.eq('registrado_por', user?.id);
       }
@@ -110,11 +108,11 @@ export default function AgendaPage() {
     } finally {
       setLoading(false);
     }
-  }, [search, filtroTipo, esTutor, esDirector, tutorGrado, user?.id]);
+  }, [search, filtroTipo, esTutor, esDirector, tutorAsignaciones, user?.id]);
 
   useEffect(() => {
-    if (tutorGrado || !esTutor) fetchObservaciones();
-  }, [fetchObservaciones, tutorGrado, esTutor]);
+    if (tutorAsignaciones.length > 0 || !esTutor) fetchObservaciones();
+  }, [fetchObservaciones, tutorAsignaciones, esTutor]);
 
   const handleCreate = async () => {
     setFormError('');
@@ -141,8 +139,8 @@ export default function AgendaPage() {
         alumno_id: alumno.id,
         alumno_nombre: `${alumno.apellidos} ${alumno.nombres}`,
         alumno_dni: form.alumno_dni,
-        grado: alumnoInfo?.grado || tutorGrado,
-        seccion: alumnoInfo?.seccion || tutorSeccion,
+        grado: alumnoInfo?.grado || (tutorAsignaciones[0]?.grado || ''),
+        seccion: alumnoInfo?.seccion || (tutorAsignaciones[0]?.seccion || ''),
         observacion: form.observacion,
         tipo: form.tipo,
         fecha: form.fecha,

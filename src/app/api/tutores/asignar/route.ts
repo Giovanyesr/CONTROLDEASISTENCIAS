@@ -18,10 +18,10 @@ export async function GET(request: Request) {
     let query = supabase.from('tutor_asignaciones').select('*');
     if (tutorId) query = query.eq('tutor_id', tutorId);
     const { data, error } = await query;
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) return NextResponse.json({ error: 'Error al obtener asignaciones' }, { status: 500 });
     return NextResponse.json(data);
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || 'Error interno' }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: 'Error interno' }, { status: 500 });
   }
 }
 
@@ -30,11 +30,7 @@ export async function POST(request: Request) {
     const { authorized } = await isServerAdmin();
     if (!authorized) return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     const body = await request.json();
-    const { tutor_id, grado, seccion } = body;
-
-    if (!tutor_id || !grado || !seccion) {
-      return NextResponse.json({ error: 'tutor_id, grado y seccion requeridos' }, { status: 400 });
-    }
+    const { tutor_id, grado, seccion, asignaciones } = body;
 
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -42,22 +38,39 @@ export async function POST(request: Request) {
       { cookies: { getAll: () => [], setAll: () => {} } }
     );
 
-    const { error } = await supabase.from('tutor_asignaciones').insert({
+    // Count existing assignments
+    const { count } = await supabase
+      .from('tutor_asignaciones')
+      .select('*', { count: 'exact', head: true })
+      .eq('tutor_id', tutor_id);
+
+    const lista = asignaciones || (grado && seccion ? [{ grado, seccion }] : []);
+    if (lista.length === 0) {
+      return NextResponse.json({ error: 'grado y seccion requeridos' }, { status: 400 });
+    }
+
+    if ((count || 0) + lista.length > 3) {
+      return NextResponse.json({ error: `El tutor ya tiene ${count} grado(s). Maximo 3 en total.` }, { status: 400 });
+    }
+
+    const rows = lista.map((a: any) => ({
       tutor_id,
-      grado: grado.trim(),
-      seccion: seccion.trim().toUpperCase(),
-    });
+      grado: a.grado.trim(),
+      seccion: a.seccion.trim().toUpperCase(),
+    }));
+
+    const { error } = await supabase.from('tutor_asignaciones').insert(rows);
 
     if (error) {
       if (error.code === '23505') {
-        return NextResponse.json({ error: 'El tutor ya está asignado a este grado/sección' }, { status: 409 });
+        return NextResponse.json({ error: 'El tutor ya esta asignado a este grado/seccion' }, { status: 409 });
       }
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: 'Error al asignar' }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || 'Error interno' }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: 'Error interno' }, { status: 500 });
   }
 }
 
@@ -79,10 +92,10 @@ export async function DELETE(request: Request) {
     );
 
     const { error } = await supabase.from('tutor_asignaciones').delete().eq('id', id);
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) return NextResponse.json({ error: 'Error al eliminar' }, { status: 500 });
 
     return NextResponse.json({ success: true });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || 'Error interno' }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: 'Error interno' }, { status: 500 });
   }
 }

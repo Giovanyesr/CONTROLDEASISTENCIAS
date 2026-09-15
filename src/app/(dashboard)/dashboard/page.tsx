@@ -174,18 +174,22 @@ export default function DashboardPage() {
       }
 
       if (esTutor && user?.id) {
-        const { data: asignacion } = await supabase
+        const { data: asignaciones } = await supabase
           .from('tutor_asignaciones')
           .select('seccion, grado')
-          .eq('tutor_id', user.id)
-          .maybeSingle();
+          .eq('tutor_id', user.id);
 
-        if (asignacion) {
-          const { data: alumnosGrado } = await supabase
-            .from('alumnos')
-            .select('perfil_id, grado, seccion')
-            .eq('grado', asignacion.grado)
-            .eq('seccion', asignacion.seccion);
+        if (asignaciones && asignaciones.length > 0) {
+          const filtros = asignaciones.map((a: any) => ({ grado: a.grado, seccion: a.seccion }));
+          let alumnosGrado: any[] = [];
+          for (const f of filtros) {
+            const { data } = await supabase
+              .from('alumnos')
+              .select('perfil_id, grado, seccion')
+              .eq('grado', f.grado)
+              .eq('seccion', f.seccion);
+            if (data) alumnosGrado = [...alumnosGrado, ...data];
+          }
 
           const ids = (alumnosGrado || []).map((a: any) => a.perfil_id);
           const alumnoInfoMap: Record<string, any> = {};
@@ -234,9 +238,10 @@ export default function DashboardPage() {
             });
 
             setTutorAlumnos(alumnosConEstado);
+            const gradosStr = [...new Set(asignaciones.map((a: any) => `${a.grado} ${a.seccion}`))].join(', ');
             setTutorData({
-              grado: asignacion.grado,
-              seccion: asignacion.seccion,
+              grado: gradosStr,
+              seccion: '',
               totalAlumnos: ids.length,
               presentes: conteo.presentes,
               tardanzas: conteo.tardanzas,

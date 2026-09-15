@@ -136,6 +136,7 @@ export default function HistorialPage() {
   }, [diaOpen, diaSeleccionado]);
 
   const esDirector = user?.rol === 'director';
+  const esTutor = user?.rol === 'tutor';
 
   const fetchHistorial = useCallback(async (signal: AbortSignal) => {
     try {
@@ -144,7 +145,37 @@ export default function HistorialPage() {
         .select('*, alumno:perfiles!asistencias_alumno_id_fkey(nombres, apellidos, dni), brigadier:perfiles!asistencias_brigadier_id_fkey(nombres, apellidos)')
         .order('fecha', { ascending: false });
 
-      if (filtroGrado) {
+      if (esTutor && user?.id) {
+        const { data: asignaciones } = await supabase
+          .from('tutor_asignaciones')
+          .select('grado, seccion')
+          .eq('tutor_id', user.id);
+        if (asignaciones && asignaciones.length > 0) {
+          let allIds: string[] = [];
+          for (const a of asignaciones) {
+            const { data } = await supabase
+              .from('alumnos')
+              .select('perfil_id')
+              .eq('grado', a.grado)
+              .eq('seccion', a.seccion);
+            if (data) allIds = [...allIds, ...data.map((x: any) => x.perfil_id)];
+          }
+          if (allIds.length > 0) {
+            query = query.in('alumno_id', allIds);
+          } else {
+            setRegistros([]);
+            setMesAsistencias({});
+            setTotal(0);
+            setLoading(false);
+            return;
+          }
+          if (!filtroGrado) {
+            setFiltroGrado(asignaciones[0].grado);
+          }
+        }
+      }
+
+      if (filtroGrado && !esTutor) {
         const { data: gradeIds } = await supabase
           .from('alumnos')
           .select('perfil_id')
@@ -179,13 +210,15 @@ export default function HistorialPage() {
         query = query.gte('fecha', `${filtroAno}-${mes.toString().padStart(2, '0')}-01`);
         const ultimoDia = new Date(parseInt(filtroAno), parseInt(filtroMes) + 1, 0).getDate();
         query = query.lte('fecha', `${filtroAno}-${mes.toString().padStart(2, '0')}-${ultimoDia}`);
+      } else if (filtroPeriodo === 'ano') {
+        query = query.gte('fecha', `${filtroAno}-01-01`).lte('fecha', `${filtroAno}-12-31`);
       }
 
       if (filtroEstado) {
         query = query.eq('estado', filtroEstado);
       }
 
-      if (!esBrigadier && !esDirector) {
+      if (!esBrigadier && !esDirector && !esTutor) {
         query = query.eq('alumno_id', user?.id);
       }
 
@@ -228,7 +261,7 @@ export default function HistorialPage() {
     } finally {
       if (!signal.aborted) setLoading(false);
     }
-  }, [filtroEstado, filtroGrado, filtroSeccion, filtroMes, filtroAno, filtroPeriodo, semanaInicio, semanaFin, page, user, esBrigadier, esDirector]);
+  }, [filtroEstado, filtroGrado, filtroSeccion, filtroMes, filtroAno, filtroPeriodo, semanaInicio, semanaFin, page, user, esBrigadier, esDirector, esTutor]);
 
   useEffect(() => {
     const abortController = new AbortController();
@@ -247,7 +280,7 @@ export default function HistorialPage() {
   }, [registros, search]);
 
   const buildExportRows = useCallback(() => {
-    if (esBrigadier || esDirector) {
+    if (esBrigadier || esDirector || esTutor) {
       return registrosFiltrados.map((r) => ({
         DNI: r.alumno?.dni || '',
         Estudiante: `${r.alumno?.nombres || ''} ${r.alumno?.apellidos || ''}`,
@@ -308,7 +341,7 @@ export default function HistorialPage() {
   }, [buildExportRows]);
 
   const totalPages = Math.ceil(total / pageSize);
-  const colSpan = (esBrigadier || esDirector) ? 6 : 4;
+  const colSpan = (esBrigadier || esDirector || esTutor) ? 6 : 4;
   const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Setiembre', 'Octubre', 'Noviembre', 'Diciembre'];
   const anos = Array.from({ length: 5 }, (_, i) => getPeruCalendarDate().getFullYear() - i);
 
@@ -374,13 +407,14 @@ export default function HistorialPage() {
                 </SelectContent>
               </Select>
             )}
-            <Select value={filtroPeriodo} onValueChange={(v) => { setFiltroPeriodo(v); setPage(0); }}>
+              <Select value={filtroPeriodo} onValueChange={(v) => { setFiltroPeriodo(v); setPage(0); }}>
               <SelectTrigger className="h-10 w-full rounded-xl border-border sm:w-32">
                 <SelectValue placeholder="Período" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="mes">Mes</SelectItem>
                 <SelectItem value="semana">Semana</SelectItem>
+                <SelectItem value="ano">Año</SelectItem>
               </SelectContent>
             </Select>
             {filtroPeriodo === 'semana' ? (
@@ -440,7 +474,7 @@ export default function HistorialPage() {
               <Loader2 className="h-5 w-5 animate-spin text-primary" />
               <span className="text-sm text-muted-foreground">Cargando...</span>
             </div>
-          ) : !(esBrigadier || esDirector) ? (
+          ) : !(esBrigadier || esDirector || esTutor) ? (
             <div className="space-y-4">
               <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                 <Calendar className="h-5 w-5 text-primary" />
@@ -495,6 +529,33 @@ export default function HistorialPage() {
               </div>
             </div>
           ) : (
+            <>
+            {filtroPeriodo === 'ano' && registrosFiltrados.length > 0 && (() => {
+              const stats = { presente: 0, tardanza: 0, falta_justificada: 0, falta_injustificada: 0 };
+              registrosFiltrados.forEach((r: any) => { stats[r.estado as keyof typeof stats] = (stats[r.estado as keyof typeof stats] || 0) + 1; });
+              const totalReg = registrosFiltrados.length;
+              const pctAsistencia = totalReg > 0 ? Math.round(((stats.presente + stats.tardanza) / totalReg) * 100) : 0;
+              return (
+                <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="rounded-xl border bg-green-50 p-4 text-center">
+                    <p className="text-2xl font-bold text-green-700">{stats.presente}</p>
+                    <p className="text-xs text-green-600">Presentes ({totalReg > 0 ? Math.round((stats.presente / totalReg) * 100) : 0}%)</p>
+                  </div>
+                  <div className="rounded-xl border bg-amber-50 p-4 text-center">
+                    <p className="text-2xl font-bold text-amber-700">{stats.tardanza}</p>
+                    <p className="text-xs text-amber-600">Tardanzas ({totalReg > 0 ? Math.round((stats.tardanza / totalReg) * 100) : 0}%)</p>
+                  </div>
+                  <div className="rounded-xl border bg-blue-50 p-4 text-center">
+                    <p className="text-2xl font-bold text-blue-700">{stats.falta_justificada}</p>
+                    <p className="text-xs text-blue-600">Justificadas ({totalReg > 0 ? Math.round((stats.falta_justificada / totalReg) * 100) : 0}%)</p>
+                  </div>
+                  <div className="rounded-xl border bg-red-50 p-4 text-center">
+                    <p className="text-2xl font-bold text-red-700">{stats.falta_injustificada}</p>
+                    <p className="text-xs text-red-600">Injustificadas ({totalReg > 0 ? Math.round((stats.falta_injustificada / totalReg) * 100) : 0}%)</p>
+                  </div>
+                </div>
+              );
+            })()}
             <div className="overflow-x-auto rounded-xl border">
               <Table>
                 <TableHeader>
@@ -544,9 +605,10 @@ export default function HistorialPage() {
                 </TableBody>
               </Table>
             </div>
+            </>
           )}
 
-              {(esBrigadier || esDirector) && totalPages > 1 && (
+              {(esBrigadier || esDirector || esTutor) && totalPages > 1 && (
             <div className="flex items-center justify-between pt-4 animate-fade-in">
               <p className="text-sm text-muted-foreground">
                 Página {page + 1} de {totalPages}

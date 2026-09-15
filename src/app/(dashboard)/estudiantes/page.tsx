@@ -38,10 +38,10 @@ export default function EstudiantesPage() {
         .from('tutor_asignaciones')
         .select('grado')
         .eq('tutor_id', user.id)
-        .maybeSingle()
         .then(({ data }) => {
-          if (data?.grado) {
-            const num = data.grado.replace(/[^\d]/g, '');
+          if (data && data.length > 0) {
+            const first = data[0].grado;
+            const num = first.replace(/[^\d]/g, '');
             if (num && !isNaN(Number(num))) {
               router.replace(`/estudiantes/${num}`);
               return;

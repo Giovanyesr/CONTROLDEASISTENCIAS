@@ -5,7 +5,7 @@ import { isServerAdmin } from '@/lib/server-auth';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { dni, nombres, apellidos, celular, genero, rol, grado, seccion, apoderado_nombre, apoderado_celular, password } = body;
+    const { dni, nombres, apellidos, celular, genero, rol, grado, seccion, asignaciones, apoderado_nombre, apoderado_celular, password } = body;
 
     const { authorized } = await isServerAdmin();
     if (!authorized) {
@@ -17,8 +17,13 @@ export async function POST(request: Request) {
     if (!['admin', 'director', 'tutor', 'brigadier', 'alumno'].includes(rol)) {
       return NextResponse.json({ error: 'Rol inválido' }, { status: 400 });
     }
-    if ((rol === 'tutor' || rol === 'brigadier' || rol === 'alumno') && (!grado || !seccion)) {
-      return NextResponse.json({ error: 'Grado y sección requeridos para este rol' }, { status: 400 });
+    if ((rol === 'tutor' || rol === 'brigadier' || rol === 'alumno') && rol !== 'tutor' && (!grado || !seccion)) {
+      return NextResponse.json({ error: 'Grado y seccion requeridos para este rol' }, { status: 400 });
+    }
+    if (rol === 'tutor') {
+      const lista = asignaciones || (grado && seccion ? [{ grado, seccion }] : []);
+      if (lista.length === 0) return NextResponse.json({ error: 'Al menos una asignacion requerida para tutor' }, { status: 400 });
+      if (lista.length > 3) return NextResponse.json({ error: 'Un tutor puede tener maximo 3 grados' }, { status: 400 });
     }
 
     const supabase = createServerClient(
@@ -99,17 +104,21 @@ export async function POST(request: Request) {
       }
     }
 
-    // If tutor, also create a record in tutor_asignaciones
-    if (rol === 'tutor' && grado && seccion) {
-      await supabase.from('tutor_asignaciones').insert({
-        tutor_id: perfil_id,
-        grado: grado.trim(),
-        seccion: seccion.trim().toUpperCase(),
-      }).then(({ error }) => {
-        if (error && error.code !== '23505') {
-          console.error('Error al asignar tutor:', error);
-        }
-      });
+    // If tutor, also create records in tutor_asignaciones
+    if (rol === 'tutor') {
+      const lista = asignaciones || (grado && seccion ? [{ grado, seccion }] : []);
+      if (lista.length > 0) {
+        const rows = lista.map((a: any) => ({
+          tutor_id: perfil_id,
+          grado: a.grado.trim(),
+          seccion: a.seccion.trim().toUpperCase(),
+        }));
+        await supabase.from('tutor_asignaciones').insert(rows).then(({ error }) => {
+          if (error && error.code !== '23505') {
+            console.error('Error al asignar tutor:', error);
+          }
+        });
+      }
     }
 
     return NextResponse.json({ id: perfil_id, uuid_qr });

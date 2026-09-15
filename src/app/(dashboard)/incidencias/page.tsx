@@ -79,13 +79,13 @@ export default function IncidenciasPage() {
         .order('created_at', { ascending: false });
 
       if (esTutor && user?.id) {
-        const { data: asignacion } = await supabase
+        const { data: asignaciones } = await supabase
           .from('tutor_asignaciones')
           .select('grado, seccion')
-          .eq('tutor_id', user.id)
-          .maybeSingle();
-        if (asignacion) {
-          query = query.eq('grado', asignacion.grado);
+          .eq('tutor_id', user.id);
+        if (asignaciones && asignaciones.length > 0) {
+          const grados = [...new Set(asignaciones.map((a: any) => a.grado))];
+          query = query.in('grado', grados);
         }
       } else if (!esDirector) {
         query = query.eq('registrado_por', user?.id);

@@ -71,6 +71,7 @@ export default function AdminPage() {
   // Create dialog
   const [createOpen, setCreateOpen] = useState(false);
   const [form, setForm] = useState<any>({ dni: '', nombres: '', apellidos: '', celular: '', genero: '', grado: '', seccion: '', password: '' });
+  const [asignaciones, setAsignaciones] = useState<{ grado: string; seccion: string }[]>([]);
   const [showPwd, setShowPwd] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -84,6 +85,7 @@ export default function AdminPage() {
   const [assignTutorId, setAssignTutorId] = useState<string | null>(null);
   const [assignGrado, setAssignGrado] = useState('');
   const [assignSeccion, setAssignSeccion] = useState('');
+  const [tutorAsignaciones, setTutorAsignaciones] = useState<any[]>([]);
 
   const esAdmin = !authLoading && user?.rol === 'admin';
 
@@ -127,22 +129,35 @@ export default function AdminPage() {
 
   const openCreate = () => {
     setForm({ dni: '', nombres: '', apellidos: '', celular: '', genero: '', grado: '', seccion: '', password: '' });
+    setAsignaciones([]);
     setSearch('');
     setCreateOpen(true);
   };
 
   const handleCreate = async () => {
-    if (!form.dni || form.dni.length !== 8) { toast.error('El DNI debe tener 8 dígitos'); return; }
+    if (!form.dni || form.dni.length !== 8) { toast.error('El DNI debe tener 8 digitos'); return; }
     if (!form.nombres || !form.apellidos) { toast.error('Completa nombres y apellidos'); return; }
-    if (!form.password || form.password.length < 6) { toast.error('La contraseña debe tener mínimo 6 caracteres'); return; }
-    if (activeTab !== 'director' && (!form.grado || !form.seccion)) { toast.error('Selecciona grado y sección'); return; }
+    if (!form.password || form.password.length < 6) { toast.error('La contrasena debe tener minimo 6 caracteres'); return; }
+    if (activeTab !== 'director') {
+      if (activeTab === 'tutor') {
+        if (asignaciones.length === 0) { toast.error('Agrega al menos un grado/seccion'); return; }
+      } else {
+        if (!form.grado || !form.seccion) { toast.error('Selecciona grado y seccion'); return; }
+      }
+    }
 
     setSubmitting(true);
     try {
+      const payload: any = { ...form, rol: activeTab, genero: form.genero || null, grado: form.grado || null, seccion: form.seccion || null };
+      if (activeTab === 'tutor') {
+        payload.asignaciones = asignaciones;
+        delete payload.grado;
+        delete payload.seccion;
+      }
       const res = await fetch('/api/auth/crear-usuario', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, rol: activeTab, genero: form.genero || null, grado: form.grado || null, seccion: form.seccion || null }),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) { const err = await res.json(); throw new Error(err.error); }
       toast.success(`${rolSingular[activeTab]} creado correctamente`);
@@ -196,20 +211,43 @@ export default function AdminPage() {
   };
 
   const handleAssignTutor = async () => {
-    if (!assignGrado || !assignSeccion) { toast.error('Selecciona grado y sección'); return; }
+    if (!assignGrado || !assignSeccion) { toast.error('Selecciona grado y seccion'); return; }
+    if (tutorAsignaciones.length >= 3) { toast.error('El tutor ya tiene 3 grados asignados'); return; }
     setSubmitting(true);
     try {
       const res = await fetch('/api/tutores/asignar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tutor_id: assignTutorId, grado: assignGrado, seccion: assignSeccion }),
+        body: JSON.stringify({ tutor_id: assignTutorId, asignaciones: [{ grado: assignGrado, seccion: assignSeccion }] }),
       });
       if (!res.ok) { const err = await res.json(); throw new Error(err.error); }
       toast.success('Docente asignado correctamente');
-      setTutorAssignOpen(false);
+      setAssignGrado('');
+      setAssignSeccion('');
+      fetchTutorAsignaciones(assignTutorId!);
       fetchUsers(activeTab);
     } catch (err: any) { toast.error(err.message); }
     finally { setSubmitting(false); }
+  };
+
+  const fetchTutorAsignaciones = async (tutorId: string) => {
+    const res = await fetch(`/api/tutores/asignar?tutor_id=${tutorId}`);
+    if (res.ok) setTutorAsignaciones(await res.json());
+  };
+
+  const handleRemoveAsignacion = async (id: string) => {
+    if (!confirm('Eliminar esta asignacion?')) return;
+    try {
+      const res = await fetch('/api/tutores/asignar', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+      if (!res.ok) { const err = await res.json(); throw new Error(err.error); }
+      toast.success('Asignacion eliminada');
+      fetchTutorAsignaciones(assignTutorId!);
+      fetchUsers(activeTab);
+    } catch (err: any) { toast.error(err.message); }
   };
 
   if (authLoading) return <div className="flex items-center justify-center gap-2 py-20"><Loader2 className="h-5 w-5 animate-spin text-primary" /><span className="text-sm text-muted-foreground">Cargando...</span></div>;
@@ -406,7 +444,7 @@ export default function AdminPage() {
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-1">
                               {key === 'tutor' && (
-                                <Button variant="ghost" size="sm" className="h-8 w-8 rounded-lg text-muted-foreground hover:bg-primary/10 hover:text-primary" title="Asignar grado/sección" onClick={() => { setAssignTutorId(u.id); setAssignGrado(u.alumno?.grado || ''); setAssignSeccion(u.alumno?.seccion || ''); setTutorAssignOpen(true); }}>
+                                <Button variant="ghost" size="sm" className="h-8 w-8 rounded-lg text-muted-foreground hover:bg-primary/10 hover:text-primary" title="Asignar grado/seccion" onClick={() => { setAssignTutorId(u.id); setTutorAsignaciones([]); setTutorAssignOpen(true); fetchTutorAsignaciones(u.id); }}>
                                   <BookOpen className="h-4 w-4" />
                                 </Button>
                               )}
@@ -480,7 +518,7 @@ export default function AdminPage() {
                 <option value="otro">Otro</option>
               </select>
             </div>
-            {activeTab !== 'director' && (
+            {activeTab !== 'director' && activeTab !== 'tutor' && (
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Grado</Label>
@@ -492,7 +530,7 @@ export default function AdminPage() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Sección</Label>
+                  <Label>Seccion</Label>
                   <Select value={form.seccion} onValueChange={(v) => setForm({ ...form, seccion: v })}>
                     <SelectTrigger className="rounded-lg"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
                     <SelectContent>
@@ -500,6 +538,45 @@ export default function AdminPage() {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+            )}
+            {activeTab === 'tutor' && (
+              <div className="space-y-3">
+                <Label>Grados asignados (maximo 3)</Label>
+                {asignaciones.map((a, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className="min-w-[60px] text-sm font-medium text-foreground">{a.grado} · {a.seccion}</span>
+                    <Button type="button" variant="ghost" size="sm" className="h-7 w-7 rounded-lg text-red-500 hover:bg-red-50 hover:text-red-600" onClick={() => setAsignaciones(asignaciones.filter((_, j) => j !== i))}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                ))}
+                {asignaciones.length < 3 && (
+                  <div className="flex gap-2">
+                    <Select value={form.grado} onValueChange={(v) => setForm({ ...form, grado: v })}>
+                      <SelectTrigger className="h-9 rounded-lg w-32"><SelectValue placeholder="Grado" /></SelectTrigger>
+                      <SelectContent>
+                        {gradosDisponibles.filter(g => !asignaciones.some(a => a.grado === g)).map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <Select value={form.seccion} onValueChange={(v) => setForm({ ...form, seccion: v })}>
+                      <SelectTrigger className="h-9 rounded-lg w-28"><SelectValue placeholder="Seccion" /></SelectTrigger>
+                      <SelectContent>
+                        {seccionesDisponibles.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <Button type="button" variant="outline" size="sm" className="h-9 rounded-lg gap-1" disabled={!form.grado || !form.seccion}
+                      onClick={() => {
+                        if (form.grado && form.seccion && !asignaciones.some(a => a.grado === form.grado && a.seccion === form.seccion)) {
+                          setAsignaciones([...asignaciones, { grado: form.grado, seccion: form.seccion }]);
+                          setForm({ ...form, grado: '', seccion: '' });
+                        }
+                      }}>
+                      <Plus className="h-3.5 w-3.5" /> Agregar
+                    </Button>
+                  </div>
+                )}
+                {asignaciones.length === 0 && <p className="text-xs text-muted-foreground">Selecciona un grado y seccion, luego haz clic en Agregar</p>}
               </div>
             )}
             <div className="space-y-2">
@@ -592,35 +669,57 @@ export default function AdminPage() {
       <Dialog open={tutorAssignOpen} onOpenChange={setTutorAssignOpen}>
         <DialogContent className="sm:max-w-sm rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="text-xl">Asignar Docente a Grado/Sección</DialogTitle>
-            <DialogDescription>Selecciona el grado y la sección del docente.</DialogDescription>
+            <DialogTitle className="text-xl">Asignar Docente a Grado/Seccion</DialogTitle>
+            <DialogDescription>Grados actuales y nueva asignacion.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label>Grado</Label>
-              <Select value={assignGrado} onValueChange={setAssignGrado}>
-                <SelectTrigger className="rounded-lg"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                <SelectContent>
-                  {gradosDisponibles.map(g => <SelectItem key={g} value={g}>{g} Grado</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Sección</Label>
-              <Select value={assignSeccion} onValueChange={setAssignSeccion}>
-                <SelectTrigger className="rounded-lg"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                <SelectContent>
-                  {seccionesDisponibles.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
+            {tutorAsignaciones.length > 0 && (
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">Grados actuales ({tutorAsignaciones.length}/3)</Label>
+                {tutorAsignaciones.map((a: any) => (
+                  <div key={a.id} className="flex items-center justify-between rounded-lg border bg-muted/30 px-3 py-2">
+                    <span className="text-sm font-medium">{a.grado} · {a.seccion}</span>
+                    <Button variant="ghost" size="sm" className="h-7 w-7 rounded-lg text-red-500 hover:bg-red-50 hover:text-red-600" onClick={() => handleRemoveAsignacion(a.id)}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {tutorAsignaciones.length < 3 && (
+              <>
+                <div className="space-y-2">
+                  <Label>Grado</Label>
+                  <Select value={assignGrado} onValueChange={setAssignGrado}>
+                    <SelectTrigger className="rounded-lg"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                    <SelectContent>
+                      {gradosDisponibles.map(g => <SelectItem key={g} value={g}>{g} Grado</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Seccion</Label>
+                  <Select value={assignSeccion} onValueChange={setAssignSeccion}>
+                    <SelectTrigger className="rounded-lg"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                    <SelectContent>
+                      {seccionesDisponibles.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            )}
+            {tutorAsignaciones.length >= 3 && (
+              <p className="text-xs text-muted-foreground text-center py-2">Este docente ya tiene los 3 grados asignados.</p>
+            )}
           </div>
           <div className="flex justify-end gap-3 pt-2">
-            <Button variant="outline" className="rounded-lg" onClick={() => setTutorAssignOpen(false)} disabled={submitting}>Cancelar</Button>
-            <Button className="gap-2 rounded-lg" onClick={handleAssignTutor} disabled={submitting}>
-              {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-              {submitting ? 'Asignando...' : 'Asignar'}
-            </Button>
+            <Button variant="outline" className="rounded-lg" onClick={() => setTutorAssignOpen(false)}>Cerrar</Button>
+            {tutorAsignaciones.length < 3 && (
+              <Button className="gap-2 rounded-lg" onClick={handleAssignTutor} disabled={submitting}>
+                {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                {submitting ? 'Asignando...' : 'Agregar'}
+              </Button>
+            )}
           </div>
         </DialogContent>
       </Dialog>
