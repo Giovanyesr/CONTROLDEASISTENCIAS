@@ -81,8 +81,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: errPerfil.message }, { status: 409 });
     }
 
-    // Only create alumno record for roles that need grade/section
-    if (['tutor', 'brigadier', 'alumno'].includes(rol)) {
+    // Only create alumno record for roles that need grade/section (not tutor - they use tutor_asignaciones)
+    if (['brigadier', 'alumno'].includes(rol)) {
       const { error: errAlumno } = await supabase.from('alumnos').insert({
         perfil_id,
         grado: grado!.trim(),

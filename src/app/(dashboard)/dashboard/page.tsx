@@ -434,7 +434,7 @@ export default function DashboardPage() {
           <div>
             <p className="text-sm font-medium uppercase tracking-wider text-primary">Panel del Asesor</p>
             <h1 className="text-2xl font-bold tracking-tight text-foreground">
-              {tutorData.grado} Grado - Sección {tutorData.seccion}
+              {tutorData.seccion ? `${tutorData.grado} Grado - Sección ${tutorData.seccion}` : `Mis Grados: ${tutorData.grado}`}
             </h1>
             <p className="mt-1 text-sm capitalize text-muted-foreground">{dateStr}</p>
           </div>
