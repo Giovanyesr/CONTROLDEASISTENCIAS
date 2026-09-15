@@ -64,6 +64,7 @@ export default function GradoPage() {
 
   const [estudiantes, setEstudiantes] = useState<any[]>([]);
   const [asistencias, setAsistencias] = useState<Record<string, any[]>>({});
+  const [last5Days, setLast5Days] = useState<string[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
@@ -193,13 +194,14 @@ export default function GradoPage() {
             if (existing) return existing;
             if (registroFecha && fecha < registroFecha) return null;
             return fecha < todayStr ? { fecha, estado: 'falta_injustificada', alumno_id: id, id: `auto-${id}-${fecha}` } : null;
-          }).filter(Boolean)];
+          })];
         })
       );
     }
 
     setEstudiantes(filtered);
     setAsistencias(asistenciasMap);
+    setLast5Days(last5Days);
   }, [gradoLabel, tutorSection]);
 
   useEffect(() => {
@@ -505,15 +507,20 @@ export default function GradoPage() {
                   <th className="px-2 sm:px-4 py-2 sm:py-3 w-8 sm:w-10"></th>
                   <th className="px-2 sm:px-4 py-2 sm:py-3">Apellidos y Nombres</th>
                   <th className="hidden sm:table-cell px-2 sm:px-4 py-2 sm:py-3">Rol</th>
-                  <th className="px-2 sm:px-4 py-2 sm:py-3 text-center" colSpan={5}>
-                    <span className="hidden sm:inline">Últimos 5 días</span>
-                    <span className="sm:hidden">5d</span>
-                    <div className="flex items-center justify-center gap-1 sm:gap-2 mt-1">
-                      <span className="inline-block h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-sm bg-emerald-500" title="Asistió" />
-                      <span className="inline-block h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-sm bg-amber-400" title="Tardanza" />
-                      <span className="inline-block h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-sm bg-red-500" title="Falta" />
-                    </div>
-                  </th>
+                   <th className="px-2 sm:px-4 py-2 sm:py-3 text-center" colSpan={5}>
+                     <span className="hidden sm:inline">Últimos 5 días</span>
+                     <span className="sm:hidden">5d</span>
+                     <div className="flex items-center justify-center gap-1 sm:gap-2 mt-1">
+                       <span className="inline-block h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-sm bg-emerald-500" title="Asistió" />
+                       <span className="inline-block h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-sm bg-amber-400" title="Tardanza" />
+                       <span className="inline-block h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-sm bg-red-500" title="Falta" />
+                     </div>
+                     <div className="flex items-center justify-center gap-0.5 sm:gap-2 mt-1 text-[8px] sm:text-[10px] text-muted-foreground">
+                       {last5Days.map((fecha: string, i: number) => (
+                         <span key={i} className="w-6 sm:w-8 text-center">{fecha.slice(8, 10)}</span>
+                       ))}
+                     </div>
+                   </th>
                 </tr>
               </thead>
               <tbody>
