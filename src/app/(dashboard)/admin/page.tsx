@@ -712,29 +712,31 @@ export default function AdminPage() {
                   </div>
                 ))}
                 {editAsignaciones.length < 3 && (
-                  <div className="flex gap-2">
-                    <Select value={editGrado} onValueChange={setEditGrado}>
-                      <SelectTrigger className="h-9 rounded-lg w-32"><SelectValue placeholder="Grado" /></SelectTrigger>
-                      <SelectContent>
-                        {gradosDisponibles.filter(g => !editAsignaciones.some(a => a.grado === g)).map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <Select value={editSeccion} onValueChange={setEditSeccion}>
-                      <SelectTrigger className="h-9 rounded-lg w-28"><SelectValue placeholder="Seccion" /></SelectTrigger>
-                      <SelectContent>
-                        {seccionesDisponibles.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <Button type="button" variant="outline" size="sm" className="h-9 rounded-lg gap-1" disabled={!editGrado || !editSeccion}
-                      onClick={() => {
-                        if (editGrado && editSeccion && !editAsignaciones.some(a => a.grado === editGrado && a.seccion === editSeccion)) {
-                          setEditAsignaciones([...editAsignaciones, { grado: editGrado, seccion: editSeccion }]);
-                          setEditGrado('');
-                          setEditSeccion('');
-                        }
-                      }}>
-                      <Plus className="h-3.5 w-3.5" /> Agregar
-                    </Button>
+                  <div className="space-y-2 rounded-lg border border-dashed border-border p-3">
+                    <div className="flex gap-2">
+                      <Select value={editGrado} onValueChange={setEditGrado}>
+                        <SelectTrigger className="h-9 rounded-lg w-32"><SelectValue placeholder="Grado" /></SelectTrigger>
+                        <SelectContent>
+                          {gradosDisponibles.filter(g => !editAsignaciones.some(a => a.grado === g)).map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <Select value={editSeccion} onValueChange={setEditSeccion}>
+                        <SelectTrigger className="h-9 rounded-lg w-28"><SelectValue placeholder="Seccion" /></SelectTrigger>
+                        <SelectContent>
+                          {seccionesDisponibles.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <Button type="button" size="sm" className="h-9 rounded-lg gap-1" disabled={!editGrado || !editSeccion}
+                        onClick={() => {
+                          if (editGrado && editSeccion && !editAsignaciones.some(a => a.grado === editGrado && a.seccion === editSeccion)) {
+                            setEditAsignaciones([...editAsignaciones, { grado: editGrado, seccion: editSeccion }]);
+                            setEditGrado('');
+                            setEditSeccion('');
+                          }
+                        }}>
+                        <Plus className="h-3.5 w-3.5" /> Agregar grado
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>
