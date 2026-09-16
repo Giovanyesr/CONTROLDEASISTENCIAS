@@ -28,6 +28,8 @@ export default function EstudiantesPage() {
   const router = useRouter();
   const [conteos, setConteos] = useState<Record<number, number>>({});
   const [loading, setLoading] = useState(true);
+  const [tutorAsignaciones, setTutorAsignaciones] = useState<{ grado: string; seccion: string }[]>([]);
+  const [tutorLoaded, setTutorLoaded] = useState(false);
   const supabase = createClient();
 
   useEffect(() => {
@@ -36,15 +38,20 @@ export default function EstudiantesPage() {
     if (user?.rol === 'tutor') {
       supabase
         .from('tutor_asignaciones')
-        .select('grado')
+        .select('grado, seccion')
         .eq('tutor_id', user.id)
         .then(({ data }) => {
+          setTutorLoaded(true);
           if (data && data.length > 0) {
-            const first = data[0].grado;
-            const num = first.replace(/[^\d]/g, '');
-            if (num && !isNaN(Number(num))) {
-              router.replace(`/estudiantes/${num}`);
-              return;
+            if (data.length === 1) {
+              const num = data[0].grado.replace(/[^\d]/g, '');
+              if (num && !isNaN(Number(num))) {
+                router.replace(`/estudiantes/${num}`);
+                return;
+              }
+            } else {
+              setTutorAsignaciones(data);
+              setLoading(false);
             }
           }
         });
@@ -74,6 +81,69 @@ export default function EstudiantesPage() {
     };
     fetchConteos();
   }, [user, authLoading, router, supabase]);
+
+  const tutorGradoColors: Record<string, string> = {
+    '1': 'from-blue-500/20 to-blue-600/10',
+    '2': 'from-green-500/20 to-green-600/10',
+    '3': 'from-yellow-500/20 to-yellow-600/10',
+    '4': 'from-purple-500/20 to-purple-600/10',
+    '5': 'from-orange-500/20 to-orange-600/10',
+  };
+  const tutorGradoBg: Record<string, string> = {
+    '1': 'bg-blue-500', '2': 'bg-green-500', '3': 'bg-yellow-500',
+    '4': 'bg-purple-500', '5': 'bg-orange-500',
+  };
+
+  if (authLoading || (user?.rol === 'tutor' && !tutorLoaded)) {
+    return (
+      <div className="flex items-center justify-center gap-2 py-16">
+        <Loader2 className="h-5 w-5 animate-spin text-primary" />
+        <span className="text-sm text-muted-foreground">Cargando...</span>
+      </div>
+    );
+  }
+
+  if (user?.rol === 'tutor' && tutorAsignaciones.length > 1) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <div className="animate-fade-in-up">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Mis Grados</h1>
+          <p className="text-sm text-muted-foreground">Selecciona un grado para ver sus estudiantes</p>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {tutorAsignaciones.map((a, index) => {
+            const num = a.grado.replace(/[^\d]/g, '');
+            const color = tutorGradoColors[num] || tutorGradoColors['1'];
+            const iconBg = tutorGradoBg[num] || 'bg-blue-500';
+            return (
+              <Link key={num} href={`/estudiantes/${num}`}>
+                <Card className="card-hover-lift animate-fade-in-up shadow-card cursor-pointer group" style={{ animationDelay: `${index * 50}ms` }}>
+                  <CardContent className="relative overflow-hidden p-5">
+                    <div className={`absolute inset-0 bg-gradient-to-br ${color} opacity-80`} />
+                    <div className="relative space-y-4">
+                      <div className={`flex h-14 w-14 items-center justify-center rounded-xl ${iconBg}/10 transition-transform duration-200 group-hover:scale-110`}>
+                        <GraduationCap className="h-7 w-7 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-bold text-foreground">{a.grado} Grado</h3>
+                        <p className="text-xs text-muted-foreground">Sección {a.seccion}</p>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <Badge variant="secondary" className="rounded-md text-xs">{a.grado} · {a.seccion}</Badge>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg transition-transform duration-200 group-hover:translate-x-1">
+                          <ArrowRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
 
   if (authLoading || user?.rol === 'tutor') {
     return (

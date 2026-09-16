@@ -77,6 +77,7 @@ export default function GradoPage() {
   const [statsHistorial, setStatsHistorial] = useState({ presentes: 0, tardanzas: 0, justificadas: 0, faltas: 0, total: 0 });
 
   const [tutorSection, setTutorSection] = useState<string | null>(null);
+  const [tutorAsignaciones, setTutorAsignaciones] = useState<{ grado: string; seccion: string }[]>([]);
 
   const [diaSeleccionado, setDiaSeleccionado] = useState<{ fecha: string; estado?: string; alumno_id?: string; hora?: string; brigadier_nombre?: string } | null>(null);
   const [diaOpen, setDiaOpen] = useState(false);
@@ -216,6 +217,7 @@ export default function GradoPage() {
           .select('seccion, grado')
           .eq('tutor_id', currentUser.id);
         if (asignaciones && asignaciones.length > 0) {
+          setTutorAsignaciones(asignaciones);
           const matchGrado = asignaciones.find((a: any) => a.grado.replace(/[^\d]/g, '') === gradoId);
           if (matchGrado) {
             setTutorSection(matchGrado.seccion);
@@ -475,6 +477,26 @@ export default function GradoPage() {
         </Button>
         )}
       </div>
+
+      {currentUser?.rol === 'tutor' && tutorAsignaciones.length > 1 && (
+        <div className="flex gap-2">
+          {tutorAsignaciones.map((a: any) => {
+            const num = a.grado.replace(/[^\d]/g, '');
+            const isActive = num === gradoId;
+            return (
+              <Button
+                key={num}
+                variant={isActive ? 'default' : 'outline'}
+                size="sm"
+                className={`rounded-xl text-sm font-medium ${isActive ? 'bg-primary text-primary-foreground' : 'border-border text-muted-foreground hover:bg-muted'}`}
+                onClick={() => router.push(`/estudiantes/${num}`)}
+              >
+                {a.grado} · {a.seccion}
+              </Button>
+            );
+          })}
+        </div>
+      )}
 
       <div className="relative input-glow">
         <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
