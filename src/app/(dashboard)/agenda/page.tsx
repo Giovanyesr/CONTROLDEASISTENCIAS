@@ -217,12 +217,12 @@ export default function AgendaPage() {
                 className="h-10 rounded-xl border-border bg-background pl-10 text-sm"
               />
             </div>
-            <Select value={filtroTipo} onValueChange={setFiltroTipo}>
+            <Select value={filtroTipo || 'all'} onValueChange={(v) => setFiltroTipo(v === 'all' ? '' : v)}>
               <SelectTrigger className="h-10 w-full rounded-xl border-border sm:w-36">
                 <SelectValue placeholder="Tipo" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos</SelectItem>
+                <SelectItem value="all">Todos</SelectItem>
                 {tipoOptions.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
               </SelectContent>
             </Select>

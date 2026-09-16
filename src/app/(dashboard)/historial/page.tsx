@@ -366,12 +366,12 @@ export default function HistorialPage() {
               </div>
             )}
             {(esBrigadier || esDirector) && (
-              <Select value={filtroGrado} onValueChange={(v) => { setFiltroGrado(v); setPage(0); }}>
+              <Select value={filtroGrado || 'all'} onValueChange={(v) => { setFiltroGrado(v === 'all' ? '' : v); setPage(0); }}>
                 <SelectTrigger className="h-10 w-full rounded-xl border-border sm:w-28">
                   <SelectValue placeholder="Grado" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
                   <SelectItem value="1°">1° Grado</SelectItem>
                   <SelectItem value="2°">2° Grado</SelectItem>
                   <SelectItem value="3°">3° Grado</SelectItem>
@@ -427,12 +427,12 @@ export default function HistorialPage() {
                 </Select>
               </>
             )}
-            <Select value={filtroEstado} onValueChange={(v) => { setFiltroEstado(v); setPage(0); }}>
+            <Select value={filtroEstado || 'all'} onValueChange={(v) => { setFiltroEstado(v === 'all' ? '' : v); setPage(0); }}>
               <SelectTrigger className="h-10 w-full rounded-xl border-border sm:w-40">
                 <SelectValue placeholder="Estado" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos</SelectItem>
+                <SelectItem value="all">Todos</SelectItem>
                 <SelectItem value="presente">Presente</SelectItem>
                 <SelectItem value="tardanza">Tardanza</SelectItem>
                 <SelectItem value="falta_justificada">Falta Justificada</SelectItem>

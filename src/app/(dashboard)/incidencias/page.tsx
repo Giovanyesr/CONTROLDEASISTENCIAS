@@ -248,21 +248,21 @@ export default function IncidenciasPage() {
                 className="h-10 rounded-xl border-border bg-background pl-10 text-sm"
               />
             </div>
-            <Select value={filtroGrado} onValueChange={setFiltroGrado}>
+            <Select value={filtroGrado || 'all'} onValueChange={(v) => setFiltroGrado(v === 'all' ? '' : v)}>
               <SelectTrigger className="h-10 w-full rounded-xl border-border sm:w-28">
                 <SelectValue placeholder="Grado" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos</SelectItem>
+                <SelectItem value="all">Todos</SelectItem>
                 {grados.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}
               </SelectContent>
             </Select>
-            <Select value={filtroTipo} onValueChange={setFiltroTipo}>
+            <Select value={filtroTipo || 'all'} onValueChange={(v) => setFiltroTipo(v === 'all' ? '' : v)}>
               <SelectTrigger className="h-10 w-full rounded-xl border-border sm:w-36">
                 <SelectValue placeholder="Tipo" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos</SelectItem>
+                <SelectItem value="all">Todos</SelectItem>
                 <SelectItem value="conducta">Conducta</SelectItem>
                 <SelectItem value="academica">Académica</SelectItem>
                 <SelectItem value="disciplinaria">Disciplinaria</SelectItem>

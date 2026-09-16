@@ -30,7 +30,7 @@ export default function LlamadasAtencionPage() {
   const esBrigadier = user?.rol === 'brigadier' || user?.es_brigadier === true;
   const esTutor = user?.rol === 'tutor';
   const esDirector = user?.rol === 'director';
-  const puedeCrear = esBrigadier;
+  const puedeCrear = esDirector || esBrigadier;
 
   const [llamadas, setLlamadas] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);

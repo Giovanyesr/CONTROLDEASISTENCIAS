@@ -32,10 +32,11 @@ export default function EstadisticasPage() {
   const mesesNombres = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Setiembre','Octubre','Noviembre','Diciembre'];
 
   useEffect(() => {
-    if (!esDirector) {
+    if (user !== null && !esDirector) {
       router.replace('/dashboard');
       return;
     }
+    if (!esDirector) return;
 
     const fetchData = async () => {
       setLoading(true);
@@ -57,7 +58,8 @@ export default function EstadisticasPage() {
         .from('asistencias')
         .select('alumno_id, estado, fecha')
         .gte('fecha', primerDia)
-        .lte('fecha', ultimoDiaStr);
+        .lte('fecha', ultimoDiaStr)
+        .range(0, 9999);
 
       const statsMap: Record<string, { faltas: number; tardanzas: number; presentes: number; total: number; nombre: string; dni: string; grado: string }> = {};
       (asistencias || []).forEach((r: any) => {

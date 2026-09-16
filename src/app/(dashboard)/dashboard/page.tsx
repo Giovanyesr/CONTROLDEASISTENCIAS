@@ -137,7 +137,7 @@ export default function DashboardPage() {
         const hoy = getPeruDate();
         const [{ data: perfiles }, { data: asistencias }] = await Promise.all([
           supabase.from('perfiles').select('id, rol, estado').eq('estado', 'activo'),
-          supabase.from('asistencias').select(`id, estado, hora, alumno:perfiles!asistencias_alumno_id_fkey(nombres, apellidos, dni)`).eq('fecha', hoy).order('created_at', { ascending: false }),
+          supabase.from('asistencias').select(`id, alumno_id, estado, hora, alumno:perfiles!asistencias_alumno_id_fkey(nombres, apellidos, dni)`).eq('fecha', hoy).order('created_at', { ascending: false }),
         ]);
         const activos = perfiles || [];
         const registros = asistencias || [];
@@ -206,19 +206,19 @@ export default function DashboardPage() {
               else conteo.faltas++;
             });
 
-            const faltantes = ids
-              .filter(id => !registrosHoy.some((r: any) => r.alumno_id === id))
-              .map(id => {
-                const info = alumnoInfoMap[id];
-                return { id, nombre: `${info?.perfil_id || id}`, dni: '—' };
-              });
-
             const { data: perfilesData } = await supabase
               .from('perfiles')
               .select('id, nombres, apellidos, dni')
               .in('id', ids);
             const perfilMap: Record<string, any> = {};
             (perfilesData || []).forEach((p: any) => { perfilMap[p.id] = p; });
+
+            const faltantes = ids
+              .filter(id => !registrosHoy.some((r: any) => r.alumno_id === id))
+              .map(id => {
+                const perfil = perfilMap[id];
+                return { id, nombre: perfil ? `${perfil.apellidos} ${perfil.nombres}` : id, dni: perfil?.dni || '—' };
+              });
 
             const alumnosConEstado = ids.map(id => {
               const registro = registrosHoy.find((r: any) => r.alumno_id === id);
