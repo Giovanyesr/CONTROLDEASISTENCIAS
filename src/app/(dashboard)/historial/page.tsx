@@ -26,7 +26,7 @@ export default function HistorialPage() {
   const [search, setSearch] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('');
   const [filtroGrado, setFiltroGrado] = useState('');
-  const [filtroSeccion, setFiltroSeccion] = useState('');
+  const [filtroSeccion] = useState('');
   const [filtroMes, setFiltroMes] = useState(getPeruCalendarDate().getMonth().toString());
   const [filtroAno, setFiltroAno] = useState(getPeruCalendarDate().getFullYear().toString());
   const [filtroPeriodo, setFiltroPeriodo] = useState('mes');
@@ -148,20 +148,18 @@ export default function HistorialPage() {
       if (esTutor && user?.id) {
         const { data: asignaciones } = await supabase
           .from('tutor_asignaciones')
-          .select('grado, seccion')
+          .select('grado')
           .eq('tutor_id', user.id);
         if (asignaciones && asignaciones.length > 0) {
-          let allIds: string[] = [];
-          for (const a of asignaciones) {
-            const { data } = await supabase
-              .from('alumnos')
-              .select('perfil_id')
-              .eq('grado', a.grado)
-              .eq('seccion', a.seccion);
-            if (data) allIds = [...allIds, ...data.map((x: any) => x.perfil_id)];
-          }
-          if (allIds.length > 0) {
-            query = query.in('alumno_id', allIds);
+          const grados = [...new Set(asignaciones.map((a: any) => a.grado))];
+          const { data: allAlumnos } = await supabase
+            .from('alumnos')
+            .select('perfil_id, grado');
+          const ids = (allAlumnos || [])
+            .filter((a: any) => grados.includes(a.grado))
+            .map((x: any) => x.perfil_id);
+          if (ids.length > 0) {
+            query = query.in('alumno_id', ids);
           } else {
             setRegistros([]);
             setMesAsistencias({});
@@ -189,17 +187,6 @@ export default function HistorialPage() {
           setTotal(0);
           setLoading(false);
           return;
-        }
-      }
-
-      if (filtroSeccion && esDirector) {
-        const { data: secIds } = await supabase
-          .from('alumnos')
-          .select('perfil_id')
-          .eq('seccion', filtroSeccion);
-        const ids = (secIds || []).map(a => a.perfil_id);
-        if (ids.length > 0) {
-          query = query.in('alumno_id', ids);
         }
       }
 
@@ -261,7 +248,7 @@ export default function HistorialPage() {
     } finally {
       if (!signal.aborted) setLoading(false);
     }
-  }, [filtroEstado, filtroGrado, filtroSeccion, filtroMes, filtroAno, filtroPeriodo, semanaInicio, semanaFin, page, user, esBrigadier, esDirector, esTutor]);
+  }, [filtroEstado, filtroGrado, filtroMes, filtroAno, filtroPeriodo, semanaInicio, semanaFin, page, user, esBrigadier, esDirector, esTutor]);
 
   useEffect(() => {
     const abortController = new AbortController();
@@ -390,20 +377,6 @@ export default function HistorialPage() {
                   <SelectItem value="3°">3° Grado</SelectItem>
                   <SelectItem value="4°">4° Grado</SelectItem>
                   <SelectItem value="5°">5° Grado</SelectItem>
-                </SelectContent>
-              </Select>
-            )}
-            {esDirector && (
-              <Select value={filtroSeccion} onValueChange={(v) => { setFiltroSeccion(v); setPage(0); }}>
-                <SelectTrigger className="h-10 w-full rounded-xl border-border sm:w-28">
-                  <SelectValue placeholder="Sección" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Todas</SelectItem>
-                  <SelectItem value="Única">Única</SelectItem>
-                  <SelectItem value="A">Sección A</SelectItem>
-                  <SelectItem value="B">Sección B</SelectItem>
-                  <SelectItem value="C">Sección C</SelectItem>
                 </SelectContent>
               </Select>
             )}
