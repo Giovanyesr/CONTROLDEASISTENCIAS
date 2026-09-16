@@ -455,12 +455,16 @@ export default function AdminPage() {
                           <TableCell className="tabular-nums text-sm">{u.dni}</TableCell>
                           <TableCell className="text-sm text-muted-foreground">{u.dni}@colegio.local</TableCell>
                           <TableCell className="text-sm">
-                            {u.asignaciones && u.asignaciones.length > 0 ? (
-                              <div className="flex flex-wrap gap-1">
-                                {u.asignaciones.map((a: any, i: number) => (
-                                  <Badge key={i} variant="secondary" className="rounded-md font-medium">{a.grado} · {a.seccion}</Badge>
-                                ))}
-                              </div>
+                            {key === 'tutor' ? (
+                              u.asignaciones && u.asignaciones.length > 0 ? (
+                                <div className="flex flex-wrap gap-1">
+                                  {u.asignaciones.map((a: any, i: number) => (
+                                    <Badge key={i} variant="secondary" className="rounded-md font-medium">{a.grado} · {a.seccion}</Badge>
+                                  ))}
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground/60">Sin grado asignado</span>
+                              )
                             ) : u.alumno?.grado ? (
                               <Badge variant="secondary" className="rounded-md font-medium">{u.alumno.grado} · {u.alumno.seccion}</Badge>
                             ) : (
