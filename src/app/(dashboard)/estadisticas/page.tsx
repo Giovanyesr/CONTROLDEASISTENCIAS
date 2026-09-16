@@ -15,7 +15,7 @@ import {
 import { getPeruDate, getPeruCalendarDate } from '@/lib/utils';
 
 export default function EstadisticasPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const supabase = createClient();
   const esDirector = user?.rol === 'director';
@@ -32,11 +32,11 @@ export default function EstadisticasPage() {
   const mesesNombres = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Setiembre','Octubre','Noviembre','Diciembre'];
 
   useEffect(() => {
-    if (user !== null && !esDirector) {
+    if (authLoading) return;
+    if (!esDirector) {
       router.replace('/dashboard');
       return;
     }
-    if (!esDirector) return;
 
     const fetchData = async () => {
       setLoading(true);
@@ -121,11 +121,11 @@ export default function EstadisticasPage() {
     };
 
     fetchData();
-  }, [filtroMes, filtroAno, esDirector]);
+  }, [authLoading, filtroMes, filtroAno, esDirector, router]);
 
   const anos = Array.from({ length: 5 }, (_, i) => getPeruCalendarDate().getFullYear() - i);
 
-  if (!esDirector) return null;
+  if (authLoading || !esDirector) return null;
 
   return (
     <div className="space-y-6 animate-fade-in">
