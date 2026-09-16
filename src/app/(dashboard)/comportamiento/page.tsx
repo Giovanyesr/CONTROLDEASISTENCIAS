@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/table';
 import {
   GraduationCap, Search, Loader2, ArrowLeft, Edit2, Save, FileText,
-  CheckCircle2, AlertTriangle, XCircle, Clock,
+  CheckCircle2, AlertTriangle, XCircle, Clock, Users, BarChart3,
 } from 'lucide-react';
 import { getPeruDate, getPeruCalendarDate } from '@/lib/utils';
 import toast from 'react-hot-toast';
@@ -44,6 +44,15 @@ function getNotaLabel(nota: number | null): string {
   return 'C';
 }
 
+type GradoResumen = {
+  grado: string;
+  totalAlumnos: number;
+  promedioNota: number | null;
+  totalFaltas: number;
+  totalTardanzas: number;
+  totalIncidencias: number;
+};
+
 export default function ComportamientoPage() {
   const { user } = useAuth();
   const router = useRouter();
@@ -67,6 +76,9 @@ export default function ComportamientoPage() {
   const [bimestreActual, setBimestreActual] = useState(Math.ceil((getPeruCalendarDate().getMonth() + 1) / 3));
   const anoActual = getPeruCalendarDate().getFullYear();
   const [tutorAsignaciones, setTutorAsignaciones] = useState<{ grado: string; seccion: string }[]>([]);
+
+  const [filtroGrado, setFiltroGrado] = useState('');
+  const [resumenPorGrado, setResumenPorGrado] = useState<GradoResumen[]>([]);
 
   const [reportOpen, setReportOpen] = useState(false);
   const [reportAlumno, setReportAlumno] = useState<any>(null);
@@ -173,12 +185,35 @@ export default function ComportamientoPage() {
       }).filter(a => a.nombre !== a.id);
 
       setAlumnos(lista);
+
+      const gradoMap: Record<string, { alumnos: number; faltas: number; tardanzas: number; incidencias: number; notas: number[] }> = {};
+      lista.forEach(a => {
+        const g = a.grado || '?';
+        if (!gradoMap[g]) gradoMap[g] = { alumnos: 0, faltas: 0, tardanzas: 0, incidencias: 0, notas: [] };
+        gradoMap[g].alumnos++;
+        gradoMap[g].faltas += fCount[a.id] || 0;
+        gradoMap[g].tardanzas += tCount[a.id] || 0;
+        gradoMap[g].incidencias += incCount[a.id] || 0;
+        const notaData = notasMap[`${a.id}-${bimestreActual}`];
+        if (notaData?.nota != null) gradoMap[g].notas.push(notaData.nota);
+      });
+
+      const resumen: GradoResumen[] = Object.entries(gradoMap).map(([grado, data]) => ({
+        grado,
+        totalAlumnos: data.alumnos,
+        promedioNota: data.notas.length > 0 ? Math.round(data.notas.reduce((s, n) => s + n, 0) / data.notas.length * 10) / 10 : null,
+        totalFaltas: data.faltas,
+        totalTardanzas: data.tardanzas,
+        totalIncidencias: data.incidencias,
+      })).sort((a, b) => a.grado.localeCompare(b.grado, undefined, { numeric: true }));
+
+      setResumenPorGrado(resumen);
     } catch {
       toast.error('Error al cargar datos');
     } finally {
       setLoading(false);
     }
-  }, [esTutor, tutorAsignaciones, anoActual]);
+  }, [esTutor, tutorAsignaciones, anoActual, bimestreActual]);
 
   useEffect(() => {
     if (tutorAsignaciones.length > 0 || !esTutor) fetchData();
@@ -343,9 +378,19 @@ export default function ComportamientoPage() {
     toast.success('Reporte exportado');
   };
 
-  const filteredAlumnos = search
-    ? alumnos.filter(a => a.nombre.toLowerCase().includes(search.toLowerCase()) || a.dni.includes(search))
-    : alumnos;
+  const filteredAlumnos = alumnos.filter(a => {
+    if (filtroGrado && a.grado !== filtroGrado) return false;
+    if (search) {
+      const s = search.toLowerCase();
+      return a.nombre.toLowerCase().includes(s) || a.dni.includes(s);
+    }
+    return true;
+  });
+
+  const getNotaBadge = (nota: number | null) => {
+    if (nota === null) return <span className="text-xs text-muted-foreground">—</span>;
+    return <Badge variant="outline" className={`rounded-md text-xs font-bold ${getNotaColor(nota)}`}>{getNotaLabel(nota)} ({nota})</Badge>;
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -355,11 +400,22 @@ export default function ComportamientoPage() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">Nota de Comportamiento</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">Comportamiento</h1>
             <p className="text-sm text-muted-foreground">Bimestre {bimestreActual} - {anoActual}</p>
           </div>
         </div>
         <div className="flex gap-2">
+          {esDirector && (
+            <Select value={filtroGrado || 'all'} onValueChange={(v) => setFiltroGrado(v === 'all' ? '' : v)}>
+              <SelectTrigger className="h-10 rounded-xl border-border sm:w-28">
+                <SelectValue placeholder="Grado" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                {resumenPorGrado.map(r => <SelectItem key={r.grado} value={r.grado}>{r.grado}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
           <Select value={bimestreActual.toString()} onValueChange={(v) => setBimestreActual(parseInt(v))}>
             <SelectTrigger className="h-10 rounded-xl border-border sm:w-36">
               <SelectValue placeholder="Bimestre" />
@@ -371,141 +427,198 @@ export default function ComportamientoPage() {
         </div>
       </div>
 
-      <Card className="shadow-card">
-        <CardHeader className="pb-0">
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <div className="relative flex-1">
-              <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Buscar alumno..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="h-10 rounded-xl border-border bg-background pl-10 text-sm"
-              />
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="pt-4">
-          {loading ? (
-            <div className="flex items-center justify-center gap-2 py-8">
-              <Loader2 className="h-5 w-5 animate-spin text-primary" />
-              <span className="text-sm text-muted-foreground">Cargando...</span>
-            </div>
-          ) : (
-            <div className="overflow-x-auto rounded-xl border">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead className="font-semibold">Alumno</TableHead>
-                    <TableHead className="font-semibold text-center">Faltas</TableHead>
-                    <TableHead className="font-semibold text-center">Tardanzas</TableHead>
-                    <TableHead className="font-semibold text-center">Incidencias</TableHead>
-                    <TableHead className="font-semibold text-center">Nota</TableHead>
-                    <TableHead className="font-semibold">Observaciones</TableHead>
-                    <TableHead className="font-semibold text-right">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredAlumnos.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={7}>
-                        <div className="flex flex-col items-center gap-2 py-8 text-center">
-                          <GraduationCap className="h-8 w-8 text-muted-foreground/40" />
-                          <p className="text-sm text-muted-foreground">No hay alumnos</p>
+      {loading ? (
+        <div className="flex items-center justify-center gap-2 py-16">
+          <Loader2 className="h-5 w-5 animate-spin text-primary" />
+          <span className="text-sm text-muted-foreground">Cargando...</span>
+        </div>
+      ) : (
+        <>
+          {resumenPorGrado.length > 0 && (
+            <div>
+              <h2 className="mb-3 text-lg font-semibold text-foreground">Resumen por Grado</h2>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                {resumenPorGrado.map(r => (
+                  <Card key={r.grado} className={`shadow-card cursor-pointer transition-all hover:ring-2 hover:ring-primary/30 ${filtroGrado === r.grado ? 'ring-2 ring-primary' : ''}`} onClick={() => setFiltroGrado(filtroGrado === r.grado ? '' : r.grado)}>
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                            <GraduationCap className="h-4 w-4 text-primary" />
+                          </div>
+                          <p className="font-bold text-foreground">{r.grado}</p>
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredAlumnos.map((alumno) => {
-                      const notaData = notas[`${alumno.id}-${bimestreActual}`];
-                      const estaEditando = editando === alumno.id;
-                      return (
-                        <TableRow key={alumno.id} className="hover:bg-muted/30">
-                          <TableCell>
-                            <p className="text-sm font-medium">{alumno.nombre}</p>
-                            <p className="text-xs text-muted-foreground">DNI {alumno.dni}</p>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <span className={`text-sm font-bold ${(faltasCount[alumno.id] || 0) > 3 ? 'text-red-600' : 'text-foreground'}`}>
-                              {faltasCount[alumno.id] || 0}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <span className="text-sm font-bold">{tardanzasCount[alumno.id] || 0}</span>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <span className={`text-sm font-bold ${(incidenciasCount[alumno.id] || 0) > 2 ? 'text-red-600' : 'text-foreground'}`}>
-                              {incidenciasCount[alumno.id] || 0}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            {estaEditando ? (
-                              <Input
-                                type="number"
-                                min="0"
-                                max="20"
-                                step="0.1"
-                                value={notaEdit}
-                                onChange={(e) => setNotaEdit(e.target.value)}
-                                className="h-8 w-16 text-center text-sm mx-auto"
-                              />
-                            ) : (
-                              <span className={`inline-flex items-center justify-center rounded-lg px-3 py-1 text-sm font-bold ${getNotaColor(notaData?.nota)}`}>
-                                {notaData?.nota?.toString() || '—'}
-                              </span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {estaEditando ? (
-                              <Input
-                                value={obsEdit}
-                                onChange={(e) => setObsEdit(e.target.value)}
-                                placeholder="Observaciones..."
-                                className="h-8 text-xs"
-                              />
-                            ) : (
-                              <span className="text-xs text-muted-foreground truncate max-w-[150px] block">
-                                {notaData?.observaciones || '—'}
-                              </span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              {estaEditando ? (
-                                <>
-                                  <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600" onClick={() => handleSaveNota(alumno.id)} disabled={saving}>
-                                    <Save className="h-4 w-4" />
-                                  </Button>
-                                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditando(null)}>
-                                    <XCircle className="h-4 w-4" />
-                                  </Button>
-                                </>
-                              ) : (
-                                <>
-                                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
-                                    setEditando(alumno.id);
-                                    setNotaEdit(notaData?.nota?.toString() || '');
-                                    setObsEdit(notaData?.observaciones || '');
-                                  }}>
-                                    <Edit2 className="h-4 w-4" />
-                                  </Button>
-                                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openReporte(alumno)}>
-                                    <FileText className="h-4 w-4" />
-                                  </Button>
-                                </>
-                              )}
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })
-                  )}
-                </TableBody>
-              </Table>
+                        <span className="text-xs text-muted-foreground">{r.totalAlumnos} alumnos</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="rounded-lg bg-green-50 p-2 text-center">
+                          <p className="font-bold text-green-700">{r.totalAlumnos - r.totalFaltas}</p>
+                          <p className="text-green-600">Asistencia</p>
+                        </div>
+                        <div className="rounded-lg bg-red-50 p-2 text-center">
+                          <p className="font-bold text-red-700">{r.totalFaltas}</p>
+                          <p className="text-red-600">Faltas</p>
+                        </div>
+                        <div className="rounded-lg bg-amber-50 p-2 text-center">
+                          <p className="font-bold text-amber-700">{r.totalTardanzas}</p>
+                          <p className="text-amber-600">Tardanzas</p>
+                        </div>
+                        <div className="rounded-lg bg-orange-50 p-2 text-center">
+                          <p className="font-bold text-orange-700">{r.totalIncidencias}</p>
+                          <p className="text-orange-600">Incidencias</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2">
+                        <span className="text-xs text-muted-foreground">Promedio nota</span>
+                        {r.promedioNota !== null ? (
+                          <Badge variant="outline" className={`text-xs font-bold ${getNotaColor(r.promedioNota)}`}>{r.promedioNota}</Badge>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             </div>
           )}
-        </CardContent>
-      </Card>
+
+          <Card className="shadow-card">
+            <CardHeader className="pb-0">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Users className="h-5 w-5 text-primary" />
+                  {filtroGrado ? `Grado ${filtroGrado}` : 'Todos los Grados'} — {filteredAlumnos.length} alumnos
+                </CardTitle>
+                <div className="relative flex-1 sm:max-w-xs">
+                  <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar alumno..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="h-10 rounded-xl border-border bg-background pl-10 text-sm"
+                  />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-4">
+              <div className="overflow-x-auto rounded-xl border">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      <TableHead className="font-semibold">Alumno</TableHead>
+                      <TableHead className="font-semibold text-center">Grado</TableHead>
+                      <TableHead className="font-semibold text-center">Faltas</TableHead>
+                      <TableHead className="font-semibold text-center">Tardanzas</TableHead>
+                      <TableHead className="font-semibold text-center">Incidencias</TableHead>
+                      <TableHead className="font-semibold text-center">Nota</TableHead>
+                      <TableHead className="font-semibold">Observaciones</TableHead>
+                      <TableHead className="font-semibold text-right">Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredAlumnos.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={8}>
+                          <div className="flex flex-col items-center gap-2 py-8 text-center">
+                            <GraduationCap className="h-8 w-8 text-muted-foreground/40" />
+                            <p className="text-sm text-muted-foreground">No hay alumnos</p>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredAlumnos.map((alumno) => {
+                        const notaData = notas[`${alumno.id}-${bimestreActual}`];
+                        const estaEditando = editando === alumno.id;
+                        return (
+                          <TableRow key={alumno.id} className="hover:bg-muted/30">
+                            <TableCell>
+                              <p className="text-sm font-medium">{alumno.nombre}</p>
+                              <p className="text-xs text-muted-foreground">DNI {alumno.dni}</p>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Badge variant="secondary" className="rounded-md text-xs">{alumno.grado}</Badge>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <span className={`text-sm font-bold ${(faltasCount[alumno.id] || 0) > 3 ? 'text-red-600' : 'text-foreground'}`}>
+                                {faltasCount[alumno.id] || 0}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <span className="text-sm font-bold">{tardanzasCount[alumno.id] || 0}</span>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <span className={`text-sm font-bold ${(incidenciasCount[alumno.id] || 0) > 2 ? 'text-red-600' : 'text-foreground'}`}>
+                                {incidenciasCount[alumno.id] || 0}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {estaEditando ? (
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  max="20"
+                                  step="0.1"
+                                  value={notaEdit}
+                                  onChange={(e) => setNotaEdit(e.target.value)}
+                                  className="h-8 w-16 text-center text-sm mx-auto"
+                                />
+                              ) : (
+                                getNotaBadge(notaData?.nota ?? null)
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {estaEditando ? (
+                                <Input
+                                  value={obsEdit}
+                                  onChange={(e) => setObsEdit(e.target.value)}
+                                  placeholder="Observaciones..."
+                                  className="h-8 text-xs"
+                                />
+                              ) : (
+                                <span className="text-xs text-muted-foreground truncate max-w-[150px] block">
+                                  {notaData?.observaciones || '—'}
+                                </span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                {estaEditando ? (
+                                  <>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600" onClick={() => handleSaveNota(alumno.id)} disabled={saving}>
+                                      <Save className="h-4 w-4" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditando(null)}>
+                                      <XCircle className="h-4 w-4" />
+                                    </Button>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
+                                      setEditando(alumno.id);
+                                      setNotaEdit(notaData?.nota?.toString() || '');
+                                      setObsEdit(notaData?.observaciones || '');
+                                    }}>
+                                      <Edit2 className="h-4 w-4" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openReporte(alumno)}>
+                                      <FileText className="h-4 w-4" />
+                                    </Button>
+                                  </>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </>
+      )}
 
       <Dialog open={reportOpen} onOpenChange={setReportOpen}>
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
