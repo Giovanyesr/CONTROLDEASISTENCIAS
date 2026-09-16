@@ -47,3 +47,5 @@ supabase/.temp/
 
 # sensitive files
 CREDENCIALES.md
+
+.env*
