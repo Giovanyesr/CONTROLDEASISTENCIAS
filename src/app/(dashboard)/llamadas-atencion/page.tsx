@@ -58,15 +58,15 @@ export default function LlamadasAtencionPage() {
       if (esTutor && user?.id) {
         const { data: asignaciones } = await supabase
           .from('tutor_asignaciones')
-          .select('grado, seccion')
+          .select('grado')
           .eq('tutor_id', user.id);
         if (asignaciones && asignaciones.length > 0) {
-          const pairs = asignaciones.map((a: any) => ({ grado: a.grado, seccion: a.seccion }));
+          const grados = [...new Set(asignaciones.map((a: any) => a.grado))];
           const { data: alumnos } = await supabase
             .from('alumnos')
-            .select('perfil_id, grado, seccion');
+            .select('perfil_id, grado');
           const ids = (alumnos || [])
-            .filter((a: any) => pairs.some((p: any) => p.grado === a.grado && p.seccion === a.seccion))
+            .filter((a: any) => grados.includes(a.grado))
             .map((a: any) => a.perfil_id);
           if (ids.length > 0) {
             query = query.in('alumno_id', ids);
@@ -128,9 +128,9 @@ export default function LlamadasAtencionPage() {
       if (esTutor && alumnoInfo && user?.id) {
         const { data: asignaciones } = await supabase
           .from('tutor_asignaciones')
-          .select('grado, seccion')
+          .select('grado')
           .eq('tutor_id', user.id);
-        const match = (asignaciones || []).some((a: any) => a.grado === alumnoInfo.grado && a.seccion === alumnoInfo.seccion);
+        const match = (asignaciones || []).some((a: any) => a.grado === alumnoInfo.grado);
         if (!match) { setFormError('Este alumno no pertenece a tus grados asignados'); setSubmitting(false); return; }
       }
 

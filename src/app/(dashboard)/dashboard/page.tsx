@@ -180,16 +180,11 @@ export default function DashboardPage() {
           .eq('tutor_id', user.id);
 
         if (asignaciones && asignaciones.length > 0) {
-          const filtros = asignaciones.map((a: any) => ({ grado: a.grado, seccion: a.seccion }));
-          let alumnosGrado: any[] = [];
-          for (const f of filtros) {
-            const { data } = await supabase
-              .from('alumnos')
-              .select('perfil_id, grado, seccion')
-              .eq('grado', f.grado)
-              .eq('seccion', f.seccion);
-            if (data) alumnosGrado = [...alumnosGrado, ...data];
-          }
+          const grados = [...new Set(asignaciones.map((a: any) => a.grado))];
+          const { data: alumnosGrado } = await supabase
+            .from('alumnos')
+            .select('perfil_id, grado')
+            .in('grado', grados);
 
           const ids = (alumnosGrado || []).map((a: any) => a.perfil_id);
           const alumnoInfoMap: Record<string, any> = {};

@@ -91,14 +91,12 @@ export default function ComportamientoPage() {
     try {
       let alumnosData: any[] = [];
       if (esTutor && tutorAsignaciones.length > 0) {
-        for (const a of tutorAsignaciones) {
-          const { data } = await supabase
-            .from('alumnos')
-            .select('perfil_id, grado, seccion')
-            .eq('grado', a.grado)
-            .eq('seccion', a.seccion);
-          if (data) alumnosData = [...alumnosData, ...data];
-        }
+        const grados = [...new Set(tutorAsignaciones.map((a: any) => a.grado))];
+        const { data } = await supabase
+          .from('alumnos')
+          .select('perfil_id, grado')
+          .in('grado', grados);
+        if (data) alumnosData = data;
       } else if (!esTutor) {
         const { data } = await supabase
           .from('alumnos')
