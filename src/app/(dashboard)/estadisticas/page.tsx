@@ -10,9 +10,19 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   BarChart3, Users, Clock, XCircle, TrendingUp, AlertTriangle,
-  GraduationCap, Loader2, ArrowLeft, Trophy, Target,
+  GraduationCap, Loader2, ArrowLeft, Trophy, Target, CheckCircle2,
 } from 'lucide-react';
-import { getPeruDate, getPeruCalendarDate } from '@/lib/utils';
+import { getPeruCalendarDate } from '@/lib/utils';
+
+type GradoStats = {
+  totalAlumnos: number;
+  presentes: number;
+  tardanzas: number;
+  justificadas: number;
+  injustificadas: number;
+  total: number;
+  asistenciaPct: number;
+};
 
 export default function EstadisticasPage() {
   const { user, loading: authLoading } = useAuth();
@@ -24,10 +34,18 @@ export default function EstadisticasPage() {
   const [filtroMes, setFiltroMes] = useState(getPeruCalendarDate().getMonth().toString());
   const [filtroAno, setFiltroAno] = useState(getPeruCalendarDate().getFullYear().toString());
 
+  const [resumen, setResumen] = useState({
+    totalAlumnos: 0,
+    totalRegistros: 0,
+    presentes: 0,
+    tardanzas: 0,
+    justificadas: 0,
+    injustificadas: 0,
+    asistenciaPct: 0,
+  });
+  const [porGrado, setPorGrado] = useState<Record<string, GradoStats>>({});
   const [topFaltas, setTopFaltas] = useState<any[]>([]);
   const [topTardanzas, setTopTardanzas] = useState<any[]>([]);
-  const [porGrado, setPorGrado] = useState<Record<string, any>>({});
-  const [resumenGeneral, setResumenGeneral] = useState({ totalAlumnos: 0, asistenciaGeneral: 0, totalFaltas: 0, totalTardanzas: 0 });
 
   const mesesNombres = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Setiembre','Octubre','Noviembre','Diciembre'];
 
@@ -47,12 +65,14 @@ export default function EstadisticasPage() {
 
       const { data: alumnosData } = await supabase
         .from('alumnos')
-        .select('perfil_id, grado, seccion');
+        .select('perfil_id, grado');
 
-      const alumnoGradoMap: Record<string, { grado: string; seccion: string }> = {};
+      const alumnoGradoMap: Record<string, string> = {};
       (alumnosData || []).forEach((a: any) => {
-        alumnoGradoMap[a.perfil_id] = { grado: a.grado, seccion: a.seccion };
+        alumnoGradoMap[a.perfil_id] = a.grado || '?';
       });
+
+      const totalAlumnosActivos = (alumnosData || []).length;
 
       const { data: asistencias } = await supabase
         .from('asistencias')
@@ -61,16 +81,16 @@ export default function EstadisticasPage() {
         .lte('fecha', ultimoDiaStr)
         .range(0, 9999);
 
-      const statsMap: Record<string, { faltas: number; tardanzas: number; presentes: number; total: number; nombre: string; dni: string; grado: string }> = {};
+      const statsMap: Record<string, { faltas: number; tardanzas: number; presentes: number; justificadas: number; injustificadas: number; total: number; nombre: string; dni: string; grado: string }> = {};
       (asistencias || []).forEach((r: any) => {
         if (!statsMap[r.alumno_id]) {
-          const info = alumnoGradoMap[r.alumno_id] || { grado: '?', seccion: '?' };
-          statsMap[r.alumno_id] = { faltas: 0, tardanzas: 0, presentes: 0, total: 0, nombre: '', dni: '', grado: info.grado };
+          statsMap[r.alumno_id] = { faltas: 0, tardanzas: 0, presentes: 0, justificadas: 0, injustificadas: 0, total: 0, nombre: '', dni: '', grado: alumnoGradoMap[r.alumno_id] || '?' };
         }
         statsMap[r.alumno_id].total++;
         if (r.estado === 'presente') statsMap[r.alumno_id].presentes++;
         else if (r.estado === 'tardanza') statsMap[r.alumno_id].tardanzas++;
-        else statsMap[r.alumno_id].faltas++;
+        else if (r.estado === 'falta_justificada') statsMap[r.alumno_id].justificadas++;
+        else statsMap[r.alumno_id].injustificadas++;
       });
 
       const perfilesIds = Object.keys(statsMap);
@@ -88,34 +108,45 @@ export default function EstadisticasPage() {
       }
 
       const todosAlumnos = Object.values(statsMap);
-      const sortedFaltas = [...todosAlumnos].sort((a, b) => b.faltas - a.faltas).slice(0, 10);
-      const sortedTardanzas = [...todosAlumnos].sort((a, b) => b.tardanzas - a.tardanzas).slice(0, 10);
+      const totalRegistros = todosAlumnos.reduce((s, a) => s + a.total, 0);
+      const totalPresentes = todosAlumnos.reduce((s, a) => s + a.presentes, 0);
+      const totalTardanzas = todosAlumnos.reduce((s, a) => s + a.tardanzas, 0);
+      const totalJustificadas = todosAlumnos.reduce((s, a) => s + a.justificadas, 0);
+      const totalInjustificadas = todosAlumnos.reduce((s, a) => s + a.injustificadas, 0);
 
-      setTopFaltas(sortedFaltas);
-      setTopTardanzas(sortedTardanzas);
+      setResumen({
+        totalAlumnos: totalAlumnosActivos,
+        totalRegistros,
+        presentes: totalPresentes,
+        tardanzas: totalTardanzas,
+        justificadas: totalJustificadas,
+        injustificadas: totalInjustificadas,
+        asistenciaPct: totalRegistros > 0 ? Math.round(((totalPresentes + totalTardanzas) / totalRegistros) * 100) : 0,
+      });
 
-      const gradoStats: Record<string, { presentes: number; tardanzas: number; faltas: number; total: number }> = {};
+      const gradoStats: Record<string, GradoStats> = {};
+      const gradoAlumnosCount: Record<string, Set<string>> = {};
       todosAlumnos.forEach(a => {
-        const g = a.grado || 'Sin grado';
-        if (!gradoStats[g]) gradoStats[g] = { presentes: 0, tardanzas: 0, faltas: 0, total: 0 };
+        const g = a.grado;
+        if (!gradoStats[g]) gradoStats[g] = { totalAlumnos: 0, presentes: 0, tardanzas: 0, justificadas: 0, injustificadas: 0, total: 0, asistenciaPct: 0 };
+        if (!gradoAlumnosCount[g]) gradoAlumnosCount[g] = new Set();
+        gradoAlumnosCount[g].add(a.nombre || a.dni);
         gradoStats[g].presentes += a.presentes;
         gradoStats[g].tardanzas += a.tardanzas;
-        gradoStats[g].faltas += a.faltas;
+        gradoStats[g].justificadas += a.justificadas;
+        gradoStats[g].injustificadas += a.injustificadas;
         gradoStats[g].total += a.total;
+      });
+      Object.keys(gradoStats).forEach(g => {
+        gradoStats[g].totalAlumnos = gradoAlumnosCount[g]?.size || 0;
+        gradoStats[g].asistenciaPct = gradoStats[g].total > 0
+          ? Math.round(((gradoStats[g].presentes + gradoStats[g].tardanzas) / gradoStats[g].total) * 100)
+          : 0;
       });
       setPorGrado(gradoStats);
 
-      const totalAlumnos = todosAlumnos.length;
-      const totalPresentes = todosAlumnos.reduce((s, a) => s + a.presentes, 0);
-      const totalRegistros = todosAlumnos.reduce((s, a) => s + a.total, 0);
-      const totalFaltas = todosAlumnos.reduce((s, a) => s + a.faltas, 0);
-      const totalTardanzas = todosAlumnos.reduce((s, a) => s + a.tardanzas, 0);
-      setResumenGeneral({
-        totalAlumnos,
-        asistenciaGeneral: totalRegistros > 0 ? Math.round(((totalPresentes + totalTardanzas) / totalRegistros) * 100) : 0,
-        totalFaltas,
-        totalTardanzas,
-      });
+      setTopFaltas([...todosAlumnos].sort((a, b) => b.injustificadas - a.injustificadas).slice(0, 10));
+      setTopTardanzas([...todosAlumnos].sort((a, b) => b.tardanzas - a.tardanzas).slice(0, 10));
 
       setLoading(false);
     };
@@ -124,6 +155,10 @@ export default function EstadisticasPage() {
   }, [authLoading, filtroMes, filtroAno, esDirector, router]);
 
   const anos = Array.from({ length: 5 }, (_, i) => getPeruCalendarDate().getFullYear() - i);
+
+  const pctColor = (pct: number) => pct >= 80 ? 'text-green-600' : pct >= 60 ? 'text-amber-600' : 'text-red-600';
+  const pctBg = (pct: number) => pct >= 80 ? 'bg-green-500' : pct >= 60 ? 'bg-amber-400' : 'bg-red-500';
+  const pctBadge = (pct: number) => pct >= 80 ? 'bg-green-50 text-green-700 border-green-200' : pct >= 60 ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-red-50 text-red-700 border-red-200';
 
   if (authLoading || !esDirector) return null;
 
@@ -166,67 +201,162 @@ export default function EstadisticasPage() {
         </div>
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Card className="shadow-card">
-              <CardContent className="p-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-2xl font-bold text-foreground">{resumenGeneral.totalAlumnos}</p>
-                    <p className="text-xs font-medium text-muted-foreground">Alumnos activos</p>
+          {/* RESUMEN GENERAL */}
+          <div>
+            <h2 className="mb-3 text-lg font-semibold text-foreground">Resumen General</h2>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <Card className="shadow-card">
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-2xl font-bold text-foreground">{resumen.totalAlumnos}</p>
+                      <p className="text-xs font-medium text-muted-foreground">Alumnos activos</p>
+                    </div>
+                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-sky-100">
+                      <Users className="h-5 w-5 text-sky-600" />
+                    </div>
                   </div>
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-sky-100">
-                    <Users className="h-5 w-5 text-sky-600" />
+                </CardContent>
+              </Card>
+              <Card className="shadow-card">
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className={`text-2xl font-bold ${pctColor(resumen.asistenciaPct)}`}>{resumen.asistenciaPct}%</p>
+                      <p className="text-xs font-medium text-muted-foreground">Asistencia general</p>
+                    </div>
+                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-green-100">
+                      <Target className="h-5 w-5 text-green-600" />
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="shadow-card">
-              <CardContent className="p-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className={`text-2xl font-bold ${resumenGeneral.asistenciaGeneral >= 80 ? 'text-green-600' : resumenGeneral.asistenciaGeneral >= 60 ? 'text-amber-600' : 'text-red-600'}`}>{resumenGeneral.asistenciaGeneral}%</p>
-                    <p className="text-xs font-medium text-muted-foreground">Asistencia general</p>
+                </CardContent>
+              </Card>
+              <Card className="shadow-card">
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-2xl font-bold text-red-600">{resumen.injustificadas}</p>
+                      <p className="text-xs font-medium text-muted-foreground">Faltas injustificadas</p>
+                    </div>
+                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-red-100">
+                      <XCircle className="h-5 w-5 text-red-600" />
+                    </div>
                   </div>
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-green-100">
-                    <Target className="h-5 w-5 text-green-600" />
+                </CardContent>
+              </Card>
+              <Card className="shadow-card">
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-2xl font-bold text-amber-600">{resumen.tardanzas}</p>
+                      <p className="text-xs font-medium text-muted-foreground">Tardanzas</p>
+                    </div>
+                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-100">
+                      <Clock className="h-5 w-5 text-amber-600" />
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="shadow-card">
-              <CardContent className="p-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-2xl font-bold text-red-600">{resumenGeneral.totalFaltas}</p>
-                    <p className="text-xs font-medium text-muted-foreground">Total faltas</p>
-                  </div>
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-red-100">
-                    <XCircle className="h-5 w-5 text-red-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="shadow-card">
-              <CardContent className="p-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-2xl font-bold text-amber-600">{resumenGeneral.totalTardanzas}</p>
-                    <p className="text-xs font-medium text-muted-foreground">Total tardanzas</p>
-                  </div>
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-100">
-                    <Clock className="h-5 w-5 text-amber-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
           </div>
 
+          {/* DETALLE GENERAL - Barras de distribución */}
+          <Card className="shadow-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <BarChart3 className="h-5 w-5 text-primary" />
+                Distribución de Asistencia - {mesesNombres[parseInt(filtroMes)]} {filtroAno}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {resumen.totalRegistros === 0 ? (
+                <p className="py-8 text-center text-sm text-muted-foreground">Sin datos para este período</p>
+              ) : (
+                <>
+                  <div className="grid gap-4 sm:grid-cols-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="flex items-center gap-1.5 text-muted-foreground"><span className="h-2.5 w-2.5 rounded-full bg-green-500" />Presentes</span>
+                        <span className="font-semibold text-foreground">{resumen.presentes}</span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-green-500 transition-all" style={{ width: `${resumen.totalRegistros > 0 ? (resumen.presentes / resumen.totalRegistros) * 100 : 0}%` }} /></div>
+                      <p className="text-xs text-muted-foreground">{resumen.totalRegistros > 0 ? Math.round((resumen.presentes / resumen.totalRegistros) * 100) : 0}%</p>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="flex items-center gap-1.5 text-muted-foreground"><span className="h-2.5 w-2.5 rounded-full bg-amber-400" />Tardanzas</span>
+                        <span className="font-semibold text-foreground">{resumen.tardanzas}</span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-amber-400 transition-all" style={{ width: `${resumen.totalRegistros > 0 ? (resumen.tardanzas / resumen.totalRegistros) * 100 : 0}%` }} /></div>
+                      <p className="text-xs text-muted-foreground">{resumen.totalRegistros > 0 ? Math.round((resumen.tardanzas / resumen.totalRegistros) * 100) : 0}%</p>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="flex items-center gap-1.5 text-muted-foreground"><span className="h-2.5 w-2.5 rounded-full bg-blue-400" />Justificadas</span>
+                        <span className="font-semibold text-foreground">{resumen.justificadas}</span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-blue-400 transition-all" style={{ width: `${resumen.totalRegistros > 0 ? (resumen.justificadas / resumen.totalRegistros) * 100 : 0}%` }} /></div>
+                      <p className="text-xs text-muted-foreground">{resumen.totalRegistros > 0 ? Math.round((resumen.justificadas / resumen.totalRegistros) * 100) : 0}%</p>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="flex items-center gap-1.5 text-muted-foreground"><span className="h-2.5 w-2.5 rounded-full bg-red-500" />Injustificadas</span>
+                        <span className="font-semibold text-foreground">{resumen.injustificadas}</span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-red-500 transition-all" style={{ width: `${resumen.totalRegistros > 0 ? (resumen.injustificadas / resumen.totalRegistros) * 100 : 0}%` }} /></div>
+                      <p className="text-xs text-muted-foreground">{resumen.totalRegistros > 0 ? Math.round((resumen.injustificadas / resumen.totalRegistros) * 100) : 0}%</p>
+                    </div>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* ESTADÍSTICAS POR GRADO */}
+          {Object.keys(porGrado).length > 0 && (
+            <div>
+              <h2 className="mb-3 text-lg font-semibold text-foreground">Estadísticas por Grado</h2>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {Object.entries(porGrado).sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true })).map(([grado, stats]) => (
+                  <Card key={grado} className="shadow-card">
+                    <CardContent className="p-5 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
+                            <GraduationCap className="h-5 w-5 text-primary" />
+                          </div>
+                          <div>
+                            <p className="font-bold text-foreground">{grado}</p>
+                            <p className="text-xs text-muted-foreground">{stats.totalAlumnos} alumnos</p>
+                          </div>
+                        </div>
+                        <Badge variant="outline" className={`rounded-lg text-sm font-bold ${pctBadge(stats.asistenciaPct)}`}>
+                          {stats.asistenciaPct}%
+                        </Badge>
+                      </div>
+                      <div className="h-2.5 overflow-hidden rounded-full bg-muted">
+                        <div className={`h-full rounded-full transition-all ${pctBg(stats.asistenciaPct)}`} style={{ width: `${stats.asistenciaPct}%` }} />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-green-500" /><span className="text-muted-foreground">Presentes:</span> <span className="font-medium">{stats.presentes}</span></div>
+                        <div className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-amber-400" /><span className="text-muted-foreground">Tardanzas:</span> <span className="font-medium">{stats.tardanzas}</span></div>
+                        <div className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-blue-400" /><span className="text-muted-foreground">Justificadas:</span> <span className="font-medium">{stats.justificadas}</span></div>
+                        <div className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-red-500" /><span className="text-muted-foreground">Injustificadas:</span> <span className="font-medium">{stats.injustificadas}</span></div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* TOP 10 */}
           <div className="grid gap-6 lg:grid-cols-2">
             <Card className="shadow-card">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <AlertTriangle className="h-5 w-5 text-red-500" />
-                  Top 10 - Más Faltas
+                  Top 10 - Más Faltas Injustificadas
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
@@ -243,7 +373,7 @@ export default function EstadisticasPage() {
                         <p className="text-xs text-muted-foreground">DNI {a.dni} · {a.grado}</p>
                       </div>
                     </div>
-                    <Badge variant="destructive" className="rounded-md">{a.faltas} faltas</Badge>
+                    <Badge variant="destructive" className="rounded-md">{a.injustificadas} faltas</Badge>
                   </div>
                 ))}
               </CardContent>
@@ -276,38 +406,6 @@ export default function EstadisticasPage() {
               </CardContent>
             </Card>
           </div>
-
-          {Object.keys(porGrado).length > 0 && (
-            <Card className="shadow-card">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <GraduationCap className="h-5 w-5 text-primary" />
-                  Asistencia por Grado - {mesesNombres[parseInt(filtroMes)]} {filtroAno}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {Object.entries(porGrado).sort(([a], [b]) => a.localeCompare(b)).map(([grado, stats]) => {
-                    const pct = stats.total > 0 ? Math.round(((stats.presentes + stats.tardanzas) / stats.total) * 100) : 0;
-                    return (
-                      <div key={grado} className="rounded-xl border p-4 space-y-3">
-                        <div className="flex items-center justify-between">
-                          <p className="font-semibold text-foreground">{grado}</p>
-                          <span className={`text-sm font-bold ${pct >= 80 ? 'text-green-600' : pct >= 60 ? 'text-amber-600' : 'text-red-600'}`}>{pct}%</span>
-                        </div>
-                        <div className="h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-green-500 transition-all" style={{ width: `${pct}%` }} /></div>
-                        <div className="flex gap-3 text-xs text-muted-foreground">
-                          <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-green-500" />{stats.presentes} P</span>
-                          <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-amber-400" />{stats.tardanzas} T</span>
-                          <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-500" />{stats.faltas} F</span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </>
       )}
     </div>
