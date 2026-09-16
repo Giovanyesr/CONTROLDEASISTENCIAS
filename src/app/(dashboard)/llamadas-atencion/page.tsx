@@ -58,11 +58,23 @@ export default function LlamadasAtencionPage() {
       if (esTutor && user?.id) {
         const { data: asignaciones } = await supabase
           .from('tutor_asignaciones')
-          .select('grado')
+          .select('grado, seccion')
           .eq('tutor_id', user.id);
         if (asignaciones && asignaciones.length > 0) {
-          const grados = [...new Set(asignaciones.map((a: any) => a.grado))];
-          query = query.in('grado', grados);
+          const pairs = asignaciones.map((a: any) => ({ grado: a.grado, seccion: a.seccion }));
+          const { data: alumnos } = await supabase
+            .from('alumnos')
+            .select('perfil_id, grado, seccion');
+          const ids = (alumnos || [])
+            .filter((a: any) => pairs.some((p: any) => p.grado === a.grado && p.seccion === a.seccion))
+            .map((a: any) => a.perfil_id);
+          if (ids.length > 0) {
+            query = query.in('alumno_id', ids);
+          } else {
+            setLlamadas([]);
+            setLoading(false);
+            return;
+          }
         }
       } else if (!esDirector && !esBrigadier) {
         return;
@@ -112,6 +124,15 @@ export default function LlamadasAtencionPage() {
         .select('grado, seccion')
         .eq('perfil_id', alumno.id)
         .maybeSingle();
+
+      if (esTutor && alumnoInfo && user?.id) {
+        const { data: asignaciones } = await supabase
+          .from('tutor_asignaciones')
+          .select('grado, seccion')
+          .eq('tutor_id', user.id);
+        const match = (asignaciones || []).some((a: any) => a.grado === alumnoInfo.grado && a.seccion === alumnoInfo.seccion);
+        if (!match) { setFormError('Este alumno no pertenece a tus grados asignados'); setSubmitting(false); return; }
+      }
 
       const { error } = await supabase.from('llamadas_atencion').insert({
         alumno_id: alumno.id,

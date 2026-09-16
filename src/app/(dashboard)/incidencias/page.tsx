@@ -70,6 +70,7 @@ export default function IncidenciasPage() {
     fecha: getPeruDate(),
   });
   const [formError, setFormError] = useState('');
+  const [tutorGrados, setTutorGrados] = useState<string[]>([]);
 
   const fetchIncidencias = useCallback(async () => {
     try {
@@ -84,8 +85,20 @@ export default function IncidenciasPage() {
           .select('grado, seccion')
           .eq('tutor_id', user.id);
         if (asignaciones && asignaciones.length > 0) {
-          const grados = [...new Set(asignaciones.map((a: any) => a.grado))];
-          query = query.in('grado', grados);
+          const pairs = asignaciones.map((a: any) => ({ grado: a.grado, seccion: a.seccion }));
+          const { data: alumnos } = await supabase
+            .from('alumnos')
+            .select('perfil_id, grado, seccion');
+          const ids = (alumnos || [])
+            .filter((a: any) => pairs.some((p: any) => p.grado === a.grado && p.seccion === a.seccion))
+            .map((a: any) => a.perfil_id);
+          if (ids.length > 0) {
+            query = query.in('alumno_id', ids);
+          } else {
+            setIncidencias([]);
+            setLoading(false);
+            return;
+          }
         }
       } else if (!esDirector) {
         query = query.eq('registrado_por', user?.id);
@@ -126,6 +139,18 @@ export default function IncidenciasPage() {
     fetchIncidencias();
   }, [fetchIncidencias]);
 
+  useEffect(() => {
+    if (esTutor && user?.id) {
+      supabase
+        .from('tutor_asignaciones')
+        .select('grado')
+        .eq('tutor_id', user.id)
+        .then(({ data }) => {
+          if (data) setTutorGrados([...new Set(data.map((a: any) => a.grado))]);
+        });
+    }
+  }, [esTutor, user?.id]);
+
   const handleCreate = async () => {
     setFormError('');
     if (!form.alumno_dni || form.alumno_dni.length !== 8) { setFormError('DNI debe tener 8 dígitos'); return; }
@@ -141,6 +166,20 @@ export default function IncidenciasPage() {
         .maybeSingle();
 
       if (!alumno) { setFormError('No se encontró alumno con ese DNI'); setSubmitting(false); return; }
+
+      if (esTutor && form.grado && user?.id) {
+        const { data: asignaciones } = await supabase
+          .from('tutor_asignaciones')
+          .select('grado, seccion')
+          .eq('tutor_id', user.id);
+        const { data: alumnoInfo } = await supabase
+          .from('alumnos')
+          .select('grado, seccion')
+          .eq('perfil_id', alumno.id)
+          .maybeSingle();
+        const match = alumnoInfo && (asignaciones || []).some((a: any) => a.grado === alumnoInfo.grado && a.seccion === alumnoInfo.seccion);
+        if (!match) { setFormError('Este alumno no pertenece a tus grados asignados'); setSubmitting(false); return; }
+      }
 
       const { error } = await supabase.from('incidencias').insert({
         alumno_id: alumno.id,
@@ -318,7 +357,7 @@ export default function IncidenciasPage() {
                 <Select value={form.grado} onValueChange={(v) => setForm({ ...form, grado: v })}>
                   <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
                   <SelectContent>
-                    {grados.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+                    {(esTutor && tutorGrados.length > 0 ? tutorGrados : grados).map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>

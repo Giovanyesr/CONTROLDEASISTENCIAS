@@ -81,8 +81,20 @@ export default function AgendaPage() {
         .order('created_at', { ascending: false });
 
       if (esTutor && tutorAsignaciones.length > 0) {
-        const grados = [...new Set(tutorAsignaciones.map(a => a.grado))];
-        query = query.in('grado', grados);
+        const pairs = tutorAsignaciones.map(a => ({ grado: a.grado, seccion: a.seccion }));
+        const { data: alumnos } = await supabase
+          .from('alumnos')
+          .select('perfil_id, grado, seccion');
+        const ids = (alumnos || [])
+          .filter((a: any) => pairs.some((p: any) => p.grado === a.grado && p.seccion === a.seccion))
+          .map((a: any) => a.perfil_id);
+        if (ids.length > 0) {
+          query = query.in('alumno_id', ids);
+        } else {
+          setObservaciones([]);
+          setLoading(false);
+          return;
+        }
       } else if (!esDirector) {
         query = query.eq('registrado_por', user?.id);
       }
@@ -134,6 +146,11 @@ export default function AgendaPage() {
         .select('grado, seccion')
         .eq('perfil_id', alumno.id)
         .maybeSingle();
+
+      if (esTutor && alumnoInfo) {
+        const match = tutorAsignaciones.some((a: any) => a.grado === alumnoInfo.grado && a.seccion === alumnoInfo.seccion);
+        if (!match) { setFormError('Este alumno no pertenece a tus grados asignados'); setSubmitting(false); return; }
+      }
 
       const { error } = await supabase.from('observaciones').insert({
         alumno_id: alumno.id,
