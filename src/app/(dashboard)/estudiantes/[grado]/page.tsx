@@ -351,20 +351,44 @@ export default function GradoPage() {
       const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: [85.6, 54] });
       const w = 85.6, h = 54;
 
+      // Fondo blanco
       doc.setFillColor(255, 255, 255);
       doc.rect(0, 0, w, h, 'F');
 
-      doc.setFillColor(41, 98, 255);
-      doc.rect(0, 0, w, 14, 'F');
+      // Barra superior con color institucional #8B6914
+      doc.setFillColor(139, 105, 20);
+      doc.rect(0, 0, w, 16, 'F');
 
+      // Línea dorada decorativa
+      doc.setFillColor(212, 168, 83);
+      doc.rect(0, 16, w, 1.5, 'F');
+
+      // Logo institucional
+      try {
+        const logoRes = await fetch('/logo.png');
+        if (logoRes.ok) {
+          const logoBlob = await logoRes.blob();
+          const logoDataUrl = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.readAsDataURL(logoBlob);
+          });
+          doc.addImage(logoDataUrl, 'PNG', 3, 2, 12, 12);
+        }
+      } catch {}
+
+      // Nombre de institución
       doc.setTextColor(255, 255, 255);
-      doc.setFontSize(7);
+      doc.setFontSize(8);
       doc.setFont('helvetica', 'bold');
-      doc.text('I.E. 30916 SAN FRANCISCO DE ASIS', w / 2, 6, { align: 'center' });
-      doc.setFontSize(5);
+      doc.text('I.E. 30916', 17, 7);
+      doc.setFontSize(6.5);
       doc.setFont('helvetica', 'normal');
-      doc.text('Sistema de Control de Asistencia', w / 2, 10, { align: 'center' });
+      doc.text('SAN FRANCISCO DE ASIS', 17, 11);
+      doc.setFontSize(5);
+      doc.text('Sistema de Control de Asistencia', 17, 14.5);
 
+      // Foto del estudiante
       let fotoDataUrl: string | null = null;
       try {
         const res = await fetch(`/api/fotos/${est.id}`);
@@ -379,38 +403,51 @@ export default function GradoPage() {
       } catch {}
 
       if (fotoDataUrl) {
-        doc.addImage(fotoDataUrl, 'JPEG', 5, 17, 16, 16);
+        doc.addImage(fotoDataUrl, 'JPEG', 5, 20, 18, 18);
       } else {
-        doc.setFillColor(230, 230, 230);
-        doc.roundedRect(5, 17, 16, 16, 2, 2, 'F');
+        doc.setFillColor(240, 240, 240);
+        doc.roundedRect(5, 20, 18, 18, 2, 2, 'F');
         doc.setTextColor(150, 150, 150);
         doc.setFontSize(10);
-        doc.text('S/F', 13, 27, { align: 'center' });
+        doc.text('S/F', 14, 31, { align: 'center' });
       }
 
-      doc.setDrawColor(200, 200, 200);
-      doc.roundedRect(4.5, 16.5, 17, 17, 2, 2, 'S');
+      // Borde foto
+      doc.setDrawColor(139, 105, 20);
+      doc.setLineWidth(0.5);
+      doc.roundedRect(4.5, 19.5, 19, 19, 2, 2, 'S');
 
+      // QR
       const qrDataUrl = await QRCode.toDataURL(est.uuid_qr || est.id, { width: 80, margin: 1 });
-      doc.addImage(qrDataUrl, 'PNG', w - 24, 17, 17, 17);
+      doc.addImage(qrDataUrl, 'PNG', w - 24, 20, 17, 17);
 
+      // Datos del estudiante
       doc.setTextColor(33, 33, 33);
-      doc.setFontSize(8);
+      doc.setFontSize(9);
       doc.setFont('helvetica', 'bold');
-      doc.text(`${est.apellidos}`, 25, 19);
-      doc.text(`${est.nombres}`, 25, 24);
+      doc.text(`${est.apellidos}`, 27, 22);
+      doc.text(`${est.nombres}`, 27, 27);
 
       doc.setFontSize(7);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(80, 80, 80);
-      doc.text(`DNI: ${est.dni || '—'}`, 25, 29);
-      doc.text(`Grado: ${est.alumno?.grado || '—'} - ${est.alumno?.seccion || '—'}`, 25, 33);
+      doc.text(`DNI: ${est.dni || '—'}`, 27, 32);
+      doc.text(`Grado: ${est.alumno?.grado || '—'} - ${est.alumno?.seccion || '—'}`, 27, 36);
 
-      doc.setFillColor(240, 240, 240);
+      // Línea separadora decorativa
+      doc.setDrawColor(212, 168, 83);
+      doc.setLineWidth(0.3);
+      doc.line(27, 38.5, w - 26, 38.5);
+
+      // Pie
+      doc.setFillColor(250, 247, 240);
       doc.roundedRect(4.5, h - 10, w - 9, 8, 1, 1, 'F');
+      doc.setDrawColor(212, 168, 83);
+      doc.setLineWidth(0.2);
+      doc.roundedRect(4.5, h - 10, w - 9, 8, 1, 1, 'S');
       doc.setFontSize(5);
-      doc.setTextColor(120, 120, 120);
-      doc.text('Documento de identificación estudiantil — I.E. 30916 San Francisco de Asís', w / 2, h - 6, { align: 'center' });
+      doc.setTextColor(120, 100, 50);
+      doc.text('Documento de identificacion estudiantil', w / 2, h - 6.5, { align: 'center' });
 
       doc.save(`carnet-${est.dni || est.id}.pdf`);
       toast.success('Carnet descargado');
