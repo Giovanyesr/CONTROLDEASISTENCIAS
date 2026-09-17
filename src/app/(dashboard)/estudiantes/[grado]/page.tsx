@@ -351,19 +351,19 @@ export default function GradoPage() {
       const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: [85.6, 54] });
       const w = 85.6, h = 54;
 
-      // Fondo blanco
+      // === CAPA 1: FONDO BLANCO ===
       doc.setFillColor(255, 255, 255);
       doc.rect(0, 0, w, h, 'F');
 
-      // Barra superior dorada institucional
+      // === CAPA 2: BARRA SUPERIOR DORADA ===
       doc.setFillColor(139, 105, 20);
       doc.rect(0, 0, w, 15, 'F');
 
-      // Línea de acento dorada clara
+      // Línea de acento
       doc.setFillColor(212, 168, 83);
       doc.rect(0, 15, w, 0.8, 'F');
 
-      // Logo / escudo institucional
+      // === CAPA 3: LOGO / ESCUDO ===
       try {
         const logoRes = await fetch('/logo.png');
         if (logoRes.ok) {
@@ -377,7 +377,7 @@ export default function GradoPage() {
         }
       } catch {}
 
-      // Texto institucional en el header
+      // Texto institucional
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(9);
       doc.setFont('helvetica', 'bold');
@@ -387,10 +387,9 @@ export default function GradoPage() {
       doc.text('SAN FRANCISCO DE ASIS', 16, 10.5);
       doc.setFontSize(5);
       doc.setFont('helvetica', 'normal');
-      doc.setTextColor(255, 255, 255);
       doc.text('Sistema de Control de Asistencia', 16, 13.5);
 
-      // Foto del estudiante con marco elegante
+      // === CAPA 4: FOTO (dibujar primero, detrás del marco) ===
       let fotoDataUrl: string | null = null;
       try {
         const res = await fetch(`/api/fotos/${est.id}`);
@@ -404,88 +403,103 @@ export default function GradoPage() {
         }
       } catch {}
 
-      // Marco exterior dorado (fondo del marco)
-      doc.setFillColor(139, 105, 20);
-      doc.roundedRect(4, 18.5, 20.5, 20.5, 2.5, 2.5, 'F');
-
-      // Marco blanco interno
-      doc.setFillColor(255, 255, 255);
-      doc.roundedRect(4.6, 19.1, 19.3, 19.3, 2, 2, 'F');
+      // Coordenadas del área de foto
+      const fotoX = 5, fotoY = 19, fotoW = 19, fotoH = 24;
 
       if (fotoDataUrl) {
-        doc.addImage(fotoDataUrl, 'JPEG', 5, 19.5, 18.5, 18.5);
+        // Dibujar foto primero (quedará detrás del marco)
+        doc.addImage(fotoDataUrl, 'JPEG', fotoX, fotoY, fotoW, fotoH);
       } else {
         doc.setFillColor(245, 242, 235);
-        doc.roundedRect(5, 19.5, 18.5, 18.5, 1.8, 1.8, 'F');
+        doc.roundedRect(fotoX, fotoY, fotoW, fotoH, 1.5, 1.5, 'F');
         doc.setTextColor(160, 140, 100);
         doc.setFontSize(9);
         doc.setFont('helvetica', 'bold');
-        doc.text('S/F', 14.25, 30.5, { align: 'center' });
+        doc.text('S/F', fotoX + fotoW / 2, fotoY + fotoH / 2 + 1, { align: 'center' });
       }
 
-      // QR con fondo blanco y borde sutil
-      const qrDataUrl = await QRCode.toDataURL(est.uuid_qr || est.id, { width: 120, margin: 0.5, color: { dark: '#1a1a1a', light: '#ffffff' } });
-      doc.setFillColor(255, 255, 255);
-      doc.roundedRect(w - 24, 18.5, 19, 19, 2, 2, 'F');
+      // === CAPA 5: MARCO DE FOTO (borde dorado encima de la foto) ===
+      doc.setDrawColor(139, 105, 20);
+      doc.setLineWidth(1.2);
+      doc.roundedRect(fotoX, fotoY, fotoW, fotoH, 1.5, 1.5, 'S');
+      // Segundo borde fino interior
       doc.setDrawColor(212, 168, 83);
       doc.setLineWidth(0.3);
-      doc.roundedRect(w - 24, 18.5, 19, 19, 2, 2, 'S');
-      doc.addImage(qrDataUrl, 'PNG', w - 23.2, 19.3, 17.4, 17.4);
+      doc.roundedRect(fotoX + 0.8, fotoY + 0.8, fotoW - 1.6, fotoH - 1.6, 1, 1, 'S');
 
-      // === DATOS DEL ESTUDIANTE (centro) ===
+      // === CAPA 6: QR ===
+      const qrX = w - 25, qrY = 19, qrSize = 19;
+      const qrDataUrl = await QRCode.toDataURL(est.uuid_qr || est.id, { width: 120, margin: 0, color: { dark: '#1a1a1a', light: '#ffffff' } });
+      doc.setFillColor(255, 255, 255);
+      doc.roundedRect(qrX, qrY, qrSize, qrSize, 1.5, 1.5, 'F');
+      doc.addImage(qrDataUrl, 'PNG', qrX + 0.8, qrY + 0.8, qrSize - 1.6, qrSize - 1.6);
+      doc.setDrawColor(212, 168, 83);
+      doc.setLineWidth(0.3);
+      doc.roundedRect(qrX, qrY, qrSize, qrSize, 1.5, 1.5, 'S');
+
+      // === CAPA 7: DATOS DEL ESTUDIANTE (centro) ===
       const infoX = 28;
-      const infoMaxW = w - 28 - 26;
+      const infoYStart = 22;
 
-      // Nombre completo (principal)
+      // Apellidos (principal)
       doc.setTextColor(30, 30, 30);
-      doc.setFontSize(10);
+      doc.setFontSize(11);
       doc.setFont('helvetica', 'bold');
-      const apellidos = (est.apellidos || '').toUpperCase();
-      const nombres = (est.nombres || '').toUpperCase();
-      doc.text(apellidos, infoX, 23);
+      doc.text((est.apellidos || '').toUpperCase(), infoX, infoYStart);
+
+      // Nombres
       doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
-      doc.text(nombres, infoX, 28);
+      doc.setTextColor(60, 60, 60);
+      doc.text((est.nombres || '').toUpperCase(), infoX, infoYStart + 6);
 
       // Línea separadora dorada
       doc.setDrawColor(212, 168, 83);
-      doc.setLineWidth(0.4);
-      doc.line(infoX, 30.5, infoX + 35, 30.5);
+      doc.setLineWidth(0.5);
+      doc.line(infoX, infoYStart + 8.5, infoX + 36, infoYStart + 8.5);
 
-      // DNI
+      // DNI (caja)
+      const dniY = infoYStart + 11;
       doc.setFillColor(250, 247, 238);
-      doc.roundedRect(infoX, 32, 35, 5, 1, 1, 'F');
-      doc.setTextColor(100, 80, 40);
-      doc.setFontSize(6);
-      doc.setFont('helvetica', 'bold');
-      doc.text('DNI', infoX + 1.5, 35.2);
-      doc.setTextColor(30, 30, 30);
-      doc.setFontSize(7.5);
-      doc.setFont('helvetica', 'bold');
-      doc.text(est.dni || '—', infoX + 8, 35.2);
-
-      // Grado
-      doc.setFillColor(250, 247, 238);
-      doc.roundedRect(infoX, 38.5, 35, 5, 1, 1, 'F');
-      doc.setTextColor(100, 80, 40);
-      doc.setFontSize(6);
-      doc.setFont('helvetica', 'bold');
-      doc.text('GRADO', infoX + 1.5, 41.7);
-      doc.setTextColor(30, 30, 30);
-      doc.setFontSize(7.5);
-      doc.setFont('helvetica', 'bold');
-      doc.text(`${est.alumno?.grado || '—'} — ${est.alumno?.seccion || '—'}`, infoX + 10, 41.7);
-
-      // Pie de tarjeta
-      doc.setFillColor(250, 247, 240);
-      doc.roundedRect(0, h - 7.5, w, 7.5, 0, 0, 'F');
+      doc.roundedRect(infoX, dniY, 36, 5.5, 1.2, 1.2, 'F');
       doc.setDrawColor(212, 168, 83);
-      doc.setLineWidth(0.3);
-      doc.line(0, h - 7.5, w, h - 7.5);
-      doc.setTextColor(120, 100, 50);
+      doc.setLineWidth(0.2);
+      doc.roundedRect(infoX, dniY, 36, 5.5, 1.2, 1.2, 'S');
+      doc.setTextColor(120, 95, 40);
       doc.setFontSize(5.5);
       doc.setFont('helvetica', 'bold');
-      doc.text('DOCUMENTO DE IDENTIFICACION ESTUDIANTIL', w / 2, h - 4, { align: 'center' });
+      doc.text('DNI', infoX + 2, dniY + 3.5);
+      doc.setTextColor(30, 30, 30);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      doc.text(est.dni || '—', infoX + 10, dniY + 3.5);
+
+      // Grado (caja)
+      const gradoY = dniY + 7.5;
+      doc.setFillColor(250, 247, 238);
+      doc.roundedRect(infoX, gradoY, 36, 5.5, 1.2, 1.2, 'F');
+      doc.setDrawColor(212, 168, 83);
+      doc.setLineWidth(0.2);
+      doc.roundedRect(infoX, gradoY, 36, 5.5, 1.2, 1.2, 'S');
+      doc.setTextColor(120, 95, 40);
+      doc.setFontSize(5.5);
+      doc.setFont('helvetica', 'bold');
+      doc.text('GRADO', infoX + 2, gradoY + 3.5);
+      doc.setTextColor(30, 30, 30);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`${est.alumno?.grado || '—'} — ${est.alumno?.seccion || '—'}`, infoX + 12, gradoY + 3.5);
+
+      // === CAPA 8: PIE DE TARJETA ===
+      doc.setFillColor(250, 247, 240);
+      doc.rect(0, h - 7, w, 7, 'F');
+      doc.setDrawColor(212, 168, 83);
+      doc.setLineWidth(0.3);
+      doc.line(0, h - 7, w, h - 7);
+      doc.setTextColor(130, 105, 45);
+      doc.setFontSize(5.5);
+      doc.setFont('helvetica', 'bold');
+      doc.text('DOCUMENTO DE IDENTIFICACION ESTUDIANTIL', w / 2, h - 3.5, { align: 'center' });
 
       doc.save(`carnet-${est.dni || est.id}.pdf`);
       toast.success('Carnet descargado');
