@@ -28,6 +28,7 @@ import toast from 'react-hot-toast';
 import { getPeruDate, getPeruCalendarDate } from '@/lib/utils';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import QRCode from 'qrcode';
 
 
 const gradosMap: Record<string, string> = { '1': '1°', '2': '2°', '3': '3°', '4': '4°', '5': '5°' };
@@ -345,6 +346,79 @@ export default function GradoPage() {
     toast.success('PDF exportado');
   };
 
+  const descargarCarnet = async (est: any) => {
+    try {
+      const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: [85.6, 54] });
+      const w = 85.6, h = 54;
+
+      doc.setFillColor(255, 255, 255);
+      doc.rect(0, 0, w, h, 'F');
+
+      doc.setFillColor(41, 98, 255);
+      doc.rect(0, 0, w, 14, 'F');
+
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'bold');
+      doc.text('I.E. 30916 SAN FRANCISCO DE ASIS', w / 2, 6, { align: 'center' });
+      doc.setFontSize(5);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Sistema de Control de Asistencia', w / 2, 10, { align: 'center' });
+
+      let fotoDataUrl: string | null = null;
+      try {
+        const res = await fetch(`/api/fotos/${est.id}`);
+        if (res.ok) {
+          const blob = await res.blob();
+          fotoDataUrl = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.readAsDataURL(blob);
+          });
+        }
+      } catch {}
+
+      if (fotoDataUrl) {
+        doc.addImage(fotoDataUrl, 'JPEG', 5, 17, 16, 16);
+      } else {
+        doc.setFillColor(230, 230, 230);
+        doc.roundedRect(5, 17, 16, 16, 2, 2, 'F');
+        doc.setTextColor(150, 150, 150);
+        doc.setFontSize(10);
+        doc.text('S/F', 13, 27, { align: 'center' });
+      }
+
+      doc.setDrawColor(200, 200, 200);
+      doc.roundedRect(4.5, 16.5, 17, 17, 2, 2, 'S');
+
+      const qrDataUrl = await QRCode.toDataURL(est.uuid_qr || est.id, { width: 80, margin: 1 });
+      doc.addImage(qrDataUrl, 'PNG', w - 24, 17, 17, 17);
+
+      doc.setTextColor(33, 33, 33);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`${est.apellidos}`, 25, 19);
+      doc.text(`${est.nombres}`, 25, 24);
+
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(80, 80, 80);
+      doc.text(`DNI: ${est.dni || '—'}`, 25, 29);
+      doc.text(`Grado: ${est.alumno?.grado || '—'} - ${est.alumno?.seccion || '—'}`, 25, 33);
+
+      doc.setFillColor(240, 240, 240);
+      doc.roundedRect(4.5, h - 10, w - 9, 8, 1, 1, 'F');
+      doc.setFontSize(5);
+      doc.setTextColor(120, 120, 120);
+      doc.text('Documento de identificación estudiantil — I.E. 30916 San Francisco de Asís', w / 2, h - 6, { align: 'center' });
+
+      doc.save(`carnet-${est.dni || est.id}.pdf`);
+      toast.success('Carnet descargado');
+    } catch {
+      toast.error('Error al generar carnet');
+    }
+  };
+
   const diasEnMes = new Date(historialAno, historialMes + 1, 0).getDate();
   const primerDiaSem = new Date(historialAno, historialMes, 1).getDay();
 
@@ -588,6 +662,13 @@ export default function GradoPage() {
                           )}
                           {currentUser?.rol === 'admin' && (<>
                           <button
+                            className="text-muted-foreground/60 hover:text-blue-500 transition-colors"
+                            onClick={(e) => { e.stopPropagation(); descargarCarnet(est); }}
+                            title="Descargar Carnet"
+                          >
+                            <Download className="h-2.5 w-2.5" />
+                          </button>
+                          <button
                             className="ml-auto text-muted-foreground/60 hover:text-foreground transition-colors"
                             onClick={(e) => { e.stopPropagation(); setRoleChangeTarget(est); setRoleChangeOpen(true); }}
                             title={est.rol === 'alumno' ? 'Convertir a Brigadier' : 'Convertir a Alumno'}
@@ -616,6 +697,13 @@ export default function GradoPage() {
                             </Badge>
                           )}
                           {currentUser?.rol === 'admin' && (<>
+                          <button
+                            className="h-6 w-6 flex items-center justify-center rounded-md text-muted-foreground/60 hover:text-blue-500 hover:bg-blue-50 transition-all"
+                            onClick={(e) => { e.stopPropagation(); descargarCarnet(est); }}
+                            title="Descargar Carnet"
+                          >
+                            <Download className="h-3 w-3" />
+                          </button>
                           <button
                             className="h-6 w-6 flex items-center justify-center rounded-md text-muted-foreground/60 hover:text-foreground hover:bg-muted transition-all"
                             onClick={(e) => { e.stopPropagation(); setRoleChangeTarget(est); setRoleChangeOpen(true); }}
@@ -760,6 +848,17 @@ export default function GradoPage() {
                         <Download className="h-3.5 w-3.5" />
                         Descargar QR
                       </Button>
+                      {currentUser?.rol === 'admin' && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="mt-2 gap-1.5 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                          onClick={() => { descargarCarnet(selectedStudentDetail); }}
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                          Descargar Carnet
+                        </Button>
+                      )}
                     </>
                   )}
                 </div>
