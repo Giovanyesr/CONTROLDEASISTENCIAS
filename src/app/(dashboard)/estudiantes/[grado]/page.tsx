@@ -428,7 +428,7 @@ export default function GradoPage() {
       doc.roundedRect(fotoX + 0.8, fotoY + 0.8, fotoW - 1.6, fotoH - 1.6, 1, 1, 'S');
 
       // === CAPA 6: QR ===
-      const qrX = w - 25, qrY = 19, qrSize = 19;
+      const qrX = w - 22, qrY = 21, qrSize = 17;
       const qrDataUrl = await QRCode.toDataURL(est.uuid_qr || est.id, { width: 120, margin: 0, color: { dark: '#1a1a1a', light: '#ffffff' } });
       doc.setFillColor(255, 255, 255);
       doc.roundedRect(qrX, qrY, qrSize, qrSize, 1.5, 1.5, 'F');
@@ -439,6 +439,7 @@ export default function GradoPage() {
 
       // === CAPA 7: DATOS DEL ESTUDIANTE (centro) ===
       const infoX = 28;
+      const infoMaxW = qrX - infoX - 3;
       const infoYStart = 22;
 
       // Apellidos (principal)
@@ -456,15 +457,15 @@ export default function GradoPage() {
       // Línea separadora dorada
       doc.setDrawColor(212, 168, 83);
       doc.setLineWidth(0.5);
-      doc.line(infoX, infoYStart + 8.5, infoX + 36, infoYStart + 8.5);
+      doc.line(infoX, infoYStart + 8.5, infoX + infoMaxW, infoYStart + 8.5);
 
       // DNI (caja)
       const dniY = infoYStart + 11;
       doc.setFillColor(250, 247, 238);
-      doc.roundedRect(infoX, dniY, 36, 5.5, 1.2, 1.2, 'F');
+      doc.roundedRect(infoX, dniY, infoMaxW, 5.5, 1.2, 1.2, 'F');
       doc.setDrawColor(212, 168, 83);
       doc.setLineWidth(0.2);
-      doc.roundedRect(infoX, dniY, 36, 5.5, 1.2, 1.2, 'S');
+      doc.roundedRect(infoX, dniY, infoMaxW, 5.5, 1.2, 1.2, 'S');
       doc.setTextColor(120, 95, 40);
       doc.setFontSize(5.5);
       doc.setFont('helvetica', 'bold');
@@ -477,10 +478,10 @@ export default function GradoPage() {
       // Grado (caja)
       const gradoY = dniY + 7.5;
       doc.setFillColor(250, 247, 238);
-      doc.roundedRect(infoX, gradoY, 36, 5.5, 1.2, 1.2, 'F');
+      doc.roundedRect(infoX, gradoY, infoMaxW, 5.5, 1.2, 1.2, 'F');
       doc.setDrawColor(212, 168, 83);
       doc.setLineWidth(0.2);
-      doc.roundedRect(infoX, gradoY, 36, 5.5, 1.2, 1.2, 'S');
+      doc.roundedRect(infoX, gradoY, infoMaxW, 5.5, 1.2, 1.2, 'S');
       doc.setTextColor(120, 95, 40);
       doc.setFontSize(5.5);
       doc.setFont('helvetica', 'bold');
