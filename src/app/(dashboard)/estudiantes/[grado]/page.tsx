@@ -355,15 +355,15 @@ export default function GradoPage() {
       doc.setFillColor(255, 255, 255);
       doc.rect(0, 0, w, h, 'F');
 
-      // Barra superior con color institucional #8B6914
+      // Barra superior dorada institucional
       doc.setFillColor(139, 105, 20);
-      doc.rect(0, 0, w, 16, 'F');
+      doc.rect(0, 0, w, 15, 'F');
 
-      // Línea dorada decorativa
+      // Línea de acento dorada clara
       doc.setFillColor(212, 168, 83);
-      doc.rect(0, 16, w, 1.5, 'F');
+      doc.rect(0, 15, w, 0.8, 'F');
 
-      // Logo institucional
+      // Logo / escudo institucional
       try {
         const logoRes = await fetch('/logo.png');
         if (logoRes.ok) {
@@ -373,22 +373,24 @@ export default function GradoPage() {
             reader.onload = () => resolve(reader.result as string);
             reader.readAsDataURL(logoBlob);
           });
-          doc.addImage(logoDataUrl, 'PNG', 3, 2, 12, 12);
+          doc.addImage(logoDataUrl, 'PNG', 3, 1.5, 11, 11);
         }
       } catch {}
 
-      // Nombre de institución
+      // Texto institucional en el header
       doc.setTextColor(255, 255, 255);
-      doc.setFontSize(8);
+      doc.setFontSize(9);
       doc.setFont('helvetica', 'bold');
-      doc.text('I.E. 30916', 17, 7);
-      doc.setFontSize(6.5);
-      doc.setFont('helvetica', 'normal');
-      doc.text('SAN FRANCISCO DE ASIS', 17, 11);
+      doc.text('I.E. 30916', 16, 6.5);
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'bold');
+      doc.text('SAN FRANCISCO DE ASIS', 16, 10.5);
       doc.setFontSize(5);
-      doc.text('Sistema de Control de Asistencia', 17, 14.5);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(255, 255, 255);
+      doc.text('Sistema de Control de Asistencia', 16, 13.5);
 
-      // Foto del estudiante
+      // Foto del estudiante con marco elegante
       let fotoDataUrl: string | null = null;
       try {
         const res = await fetch(`/api/fotos/${est.id}`);
@@ -402,52 +404,88 @@ export default function GradoPage() {
         }
       } catch {}
 
+      // Marco exterior dorado (fondo del marco)
+      doc.setFillColor(139, 105, 20);
+      doc.roundedRect(4, 18.5, 20.5, 20.5, 2.5, 2.5, 'F');
+
+      // Marco blanco interno
+      doc.setFillColor(255, 255, 255);
+      doc.roundedRect(4.6, 19.1, 19.3, 19.3, 2, 2, 'F');
+
       if (fotoDataUrl) {
-        doc.addImage(fotoDataUrl, 'JPEG', 5, 20, 18, 18);
+        doc.addImage(fotoDataUrl, 'JPEG', 5, 19.5, 18.5, 18.5);
       } else {
-        doc.setFillColor(240, 240, 240);
-        doc.roundedRect(5, 20, 18, 18, 2, 2, 'F');
-        doc.setTextColor(150, 150, 150);
-        doc.setFontSize(10);
-        doc.text('S/F', 14, 31, { align: 'center' });
+        doc.setFillColor(245, 242, 235);
+        doc.roundedRect(5, 19.5, 18.5, 18.5, 1.8, 1.8, 'F');
+        doc.setTextColor(160, 140, 100);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.text('S/F', 14.25, 30.5, { align: 'center' });
       }
 
-      // Borde foto
-      doc.setDrawColor(139, 105, 20);
-      doc.setLineWidth(0.5);
-      doc.roundedRect(4.5, 19.5, 19, 19, 2, 2, 'S');
-
-      // QR
-      const qrDataUrl = await QRCode.toDataURL(est.uuid_qr || est.id, { width: 80, margin: 1 });
-      doc.addImage(qrDataUrl, 'PNG', w - 24, 20, 17, 17);
-
-      // Datos del estudiante
-      doc.setTextColor(33, 33, 33);
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'bold');
-      doc.text(`${est.apellidos}`, 27, 22);
-      doc.text(`${est.nombres}`, 27, 27);
-
-      doc.setFontSize(7);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(80, 80, 80);
-      doc.text(`DNI: ${est.dni || '—'}`, 27, 32);
-      doc.text(`Grado: ${est.alumno?.grado || '—'} - ${est.alumno?.seccion || '—'}`, 27, 36);
-
-      // Línea separadora decorativa
+      // QR con fondo blanco y borde sutil
+      const qrDataUrl = await QRCode.toDataURL(est.uuid_qr || est.id, { width: 120, margin: 0.5, color: { dark: '#1a1a1a', light: '#ffffff' } });
+      doc.setFillColor(255, 255, 255);
+      doc.roundedRect(w - 24, 18.5, 19, 19, 2, 2, 'F');
       doc.setDrawColor(212, 168, 83);
       doc.setLineWidth(0.3);
-      doc.line(27, 38.5, w - 26, 38.5);
+      doc.roundedRect(w - 24, 18.5, 19, 19, 2, 2, 'S');
+      doc.addImage(qrDataUrl, 'PNG', w - 23.2, 19.3, 17.4, 17.4);
 
-      // Pie
-      doc.setFillColor(250, 247, 240);
-      doc.roundedRect(4.5, h - 10, w - 9, 8, 1, 1, 'F');
+      // === DATOS DEL ESTUDIANTE (centro) ===
+      const infoX = 28;
+      const infoMaxW = w - 28 - 26;
+
+      // Nombre completo (principal)
+      doc.setTextColor(30, 30, 30);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      const apellidos = (est.apellidos || '').toUpperCase();
+      const nombres = (est.nombres || '').toUpperCase();
+      doc.text(apellidos, infoX, 23);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.text(nombres, infoX, 28);
+
+      // Línea separadora dorada
       doc.setDrawColor(212, 168, 83);
-      doc.setLineWidth(0.2);
-      doc.roundedRect(4.5, h - 10, w - 9, 8, 1, 1, 'S');
-      doc.setFontSize(5);
+      doc.setLineWidth(0.4);
+      doc.line(infoX, 30.5, infoX + 35, 30.5);
+
+      // DNI
+      doc.setFillColor(250, 247, 238);
+      doc.roundedRect(infoX, 32, 35, 5, 1, 1, 'F');
+      doc.setTextColor(100, 80, 40);
+      doc.setFontSize(6);
+      doc.setFont('helvetica', 'bold');
+      doc.text('DNI', infoX + 1.5, 35.2);
+      doc.setTextColor(30, 30, 30);
+      doc.setFontSize(7.5);
+      doc.setFont('helvetica', 'bold');
+      doc.text(est.dni || '—', infoX + 8, 35.2);
+
+      // Grado
+      doc.setFillColor(250, 247, 238);
+      doc.roundedRect(infoX, 38.5, 35, 5, 1, 1, 'F');
+      doc.setTextColor(100, 80, 40);
+      doc.setFontSize(6);
+      doc.setFont('helvetica', 'bold');
+      doc.text('GRADO', infoX + 1.5, 41.7);
+      doc.setTextColor(30, 30, 30);
+      doc.setFontSize(7.5);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`${est.alumno?.grado || '—'} — ${est.alumno?.seccion || '—'}`, infoX + 10, 41.7);
+
+      // Pie de tarjeta
+      doc.setFillColor(250, 247, 240);
+      doc.roundedRect(0, h - 7.5, w, 7.5, 0, 0, 'F');
+      doc.setDrawColor(212, 168, 83);
+      doc.setLineWidth(0.3);
+      doc.line(0, h - 7.5, w, h - 7.5);
       doc.setTextColor(120, 100, 50);
-      doc.text('Documento de identificacion estudiantil', w / 2, h - 6.5, { align: 'center' });
+      doc.setFontSize(5.5);
+      doc.setFont('helvetica', 'bold');
+      doc.text('DOCUMENTO DE IDENTIFICACION ESTUDIANTIL', w / 2, h - 4, { align: 'center' });
 
       doc.save(`carnet-${est.dni || est.id}.pdf`);
       toast.success('Carnet descargado');
