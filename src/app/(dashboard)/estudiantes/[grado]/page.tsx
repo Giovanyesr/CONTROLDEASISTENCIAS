@@ -363,7 +363,7 @@ export default function GradoPage() {
       doc.setFillColor(212, 168, 83);
       doc.rect(0, 15, w, 0.8, 'F');
 
-      // === CAPA 3: LOGO / ESCUDO ===
+      // === CAPA 3: LOGO / ESCUDO (sin marco) ===
       try {
         const logoRes = await fetch('/logo.png');
         if (logoRes.ok) {
@@ -377,19 +377,20 @@ export default function GradoPage() {
         }
       } catch {}
 
-      // Texto institucional
+      // Texto institucional centrado
+      const textCenterX = w / 2;
       doc.setTextColor(255, 255, 255);
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'bold');
-      doc.text('I.E. 30916', 16, 6.5);
-      doc.setFontSize(7);
-      doc.setFont('helvetica', 'bold');
-      doc.text('SAN FRANCISCO DE ASIS', 16, 10.5);
-      doc.setFontSize(5);
-      doc.setFont('helvetica', 'normal');
-      doc.text('Sistema de Control de Asistencia', 16, 13.5);
+      doc.setFontSize(10);
+      doc.setFont('times', 'bold');
+      doc.text('I.E. 30916', textCenterX, 6, { align: 'center' });
+      doc.setFontSize(8);
+      doc.setFont('times', 'bold');
+      doc.text('SAN FRANCISCO DE ASIS', textCenterX, 10, { align: 'center' });
+      doc.setFontSize(5.5);
+      doc.setFont('times', 'italic');
+      doc.text('Sistema de Control de Asistencia', textCenterX, 13.5, { align: 'center' });
 
-      // === CAPA 4: FOTO (dibujar primero, detrás del marco) ===
+      // === CAPA 4: FOTO (sin marco) ===
       let fotoDataUrl: string | null = null;
       try {
         const res = await fetch(`/api/fotos/${est.id}`);
@@ -403,11 +404,9 @@ export default function GradoPage() {
         }
       } catch {}
 
-      // Coordenadas del área de foto
       const fotoX = 5, fotoY = 19, fotoW = 19, fotoH = 24;
 
       if (fotoDataUrl) {
-        // Dibujar foto primero (quedará detrás del marco)
         doc.addImage(fotoDataUrl, 'JPEG', fotoX, fotoY, fotoW, fotoH);
       } else {
         doc.setFillColor(245, 242, 235);
@@ -418,26 +417,12 @@ export default function GradoPage() {
         doc.text('S/F', fotoX + fotoW / 2, fotoY + fotoH / 2 + 1, { align: 'center' });
       }
 
-      // === CAPA 5: MARCO DE FOTO (borde dorado encima de la foto) ===
-      doc.setDrawColor(139, 105, 20);
-      doc.setLineWidth(1.2);
-      doc.roundedRect(fotoX, fotoY, fotoW, fotoH, 1.5, 1.5, 'S');
-      // Segundo borde fino interior
-      doc.setDrawColor(212, 168, 83);
-      doc.setLineWidth(0.3);
-      doc.roundedRect(fotoX + 0.8, fotoY + 0.8, fotoW - 1.6, fotoH - 1.6, 1, 1, 'S');
-
-      // === CAPA 6: QR ===
+      // === CAPA 5: QR (sin marco) ===
       const qrX = w - 22, qrY = 21, qrSize = 17;
       const qrDataUrl = await QRCode.toDataURL(est.uuid_qr || est.id, { width: 120, margin: 0, color: { dark: '#1a1a1a', light: '#ffffff' } });
-      doc.setFillColor(255, 255, 255);
-      doc.roundedRect(qrX, qrY, qrSize, qrSize, 1.5, 1.5, 'F');
-      doc.addImage(qrDataUrl, 'PNG', qrX + 0.8, qrY + 0.8, qrSize - 1.6, qrSize - 1.6);
-      doc.setDrawColor(212, 168, 83);
-      doc.setLineWidth(0.3);
-      doc.roundedRect(qrX, qrY, qrSize, qrSize, 1.5, 1.5, 'S');
+      doc.addImage(qrDataUrl, 'PNG', qrX, qrY, qrSize, qrSize);
 
-      // === CAPA 7: DATOS DEL ESTUDIANTE (centro) ===
+      // === CAPA 6: DATOS DEL ESTUDIANTE (centro) ===
       const infoX = 28;
       const infoMaxW = qrX - infoX - 3;
       const infoYStart = 22;
@@ -463,9 +448,6 @@ export default function GradoPage() {
       const dniY = infoYStart + 11;
       doc.setFillColor(250, 247, 238);
       doc.roundedRect(infoX, dniY, infoMaxW, 5.5, 1.2, 1.2, 'F');
-      doc.setDrawColor(212, 168, 83);
-      doc.setLineWidth(0.2);
-      doc.roundedRect(infoX, dniY, infoMaxW, 5.5, 1.2, 1.2, 'S');
       doc.setTextColor(120, 95, 40);
       doc.setFontSize(5.5);
       doc.setFont('helvetica', 'bold');
@@ -479,9 +461,6 @@ export default function GradoPage() {
       const gradoY = dniY + 7.5;
       doc.setFillColor(250, 247, 238);
       doc.roundedRect(infoX, gradoY, infoMaxW, 5.5, 1.2, 1.2, 'F');
-      doc.setDrawColor(212, 168, 83);
-      doc.setLineWidth(0.2);
-      doc.roundedRect(infoX, gradoY, infoMaxW, 5.5, 1.2, 1.2, 'S');
       doc.setTextColor(120, 95, 40);
       doc.setFontSize(5.5);
       doc.setFont('helvetica', 'bold');
@@ -491,7 +470,7 @@ export default function GradoPage() {
       doc.setFont('helvetica', 'bold');
       doc.text(`${est.alumno?.grado || '—'} — ${est.alumno?.seccion || '—'}`, infoX + 12, gradoY + 3.5);
 
-      // === CAPA 8: PIE DE TARJETA ===
+      // === CAPA 7: PIE DE TARJETA ===
       doc.setFillColor(250, 247, 240);
       doc.rect(0, h - 7, w, 7, 'F');
       doc.setDrawColor(212, 168, 83);
