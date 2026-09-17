@@ -348,150 +348,197 @@ export default function GradoPage() {
 
   const descargarCarnet = async (est: any) => {
     try {
-      const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: [85.6, 54] });
-      const w = 85.6, h = 54;
+      // PNG a 300 DPI: 85.6mm x 54mm = 1012 x 638 px
+      const DPI = 300;
+      const MM_TO_PX = DPI / 25.4;
+      const mm = (v: number) => Math.round(v * MM_TO_PX);
+      const cardW = mm(85.6), cardH = mm(54);
 
-      // === CAPA 1: FONDO BLANCO ===
-      doc.setFillColor(255, 255, 255);
-      doc.rect(0, 0, w, h, 'F');
+      const canvas = document.createElement('canvas');
+      canvas.width = cardW;
+      canvas.height = cardH;
+      const ctx = canvas.getContext('2d')!;
 
-      // === CAPA 2: BARRA SUPERIOR DORADA ===
-      doc.setFillColor(139, 105, 20);
-      doc.rect(0, 0, w, 15, 'F');
+      // Fondo blanco
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, cardW, cardH);
+
+      // Barra superior dorada
+      ctx.fillStyle = '#8B6914';
+      ctx.fillRect(0, 0, cardW, mm(15));
 
       // Línea de acento
-      doc.setFillColor(212, 168, 83);
-      doc.rect(0, 15, w, 0.8, 'F');
+      ctx.fillStyle = '#D4A853';
+      ctx.fillRect(0, mm(15), cardW, mm(0.8));
 
-      // === CAPA 3: LOGO / ESCUDO (cubre todo el header) ===
+      // Logo centrado que cubre el header
       try {
         const logoRes = await fetch('/logo.png');
         if (logoRes.ok) {
           const logoBlob = await logoRes.blob();
-          const logoDataUrl = await new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result as string);
-            reader.readAsDataURL(logoBlob);
+          const logoImg = await new Promise<HTMLImageElement>((resolve) => {
+            const img = new Image();
+            img.onload = () => resolve(img);
+            img.src = URL.createObjectURL(logoBlob);
           });
-          // Logo grande centrado que cubre casi todo el header
-          const logoW = 22;
-          const logoH = 14;
-          const logoX = (w - logoW) / 2;
-          const logoY = 0.5;
-          doc.addImage(logoDataUrl, 'PNG', logoX, logoY, logoW, logoH);
+          const logoH = mm(14);
+          const logoW = logoH * (logoImg.width / logoImg.height);
+          const logoX = (cardW - logoW) / 2;
+          ctx.drawImage(logoImg, logoX, mm(0.5), logoW, logoH);
+          URL.revokeObjectURL(logoImg.src);
         }
       } catch {}
 
-      // Texto institucional superpuesto al header
-      const textCenterX = w / 2;
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(10);
-      doc.setFont('times', 'bold');
-      doc.text('I.E. 30916', textCenterX, 6, { align: 'center' });
-      doc.setFontSize(8);
-      doc.setFont('times', 'bold');
-      doc.text('SAN FRANCISCO DE ASIS', textCenterX, 10, { align: 'center' });
-      doc.setFontSize(5.5);
-      doc.setFont('times', 'italic');
-      doc.text('Sistema de Control de Asistencia', textCenterX, 13.5, { align: 'center' });
+      // Texto institucional
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const cx = cardW / 2;
+      ctx.font = `bold ${mm(3.5)}px "Times New Roman", Times, serif`;
+      ctx.fillText('I.E. 30916', cx, mm(5.5));
+      ctx.font = `bold ${mm(2.8)}px "Times New Roman", Times, serif`;
+      ctx.fillText('SAN FRANCISCO DE ASIS', cx, mm(9.5));
+      ctx.font = `italic ${mm(2)}px "Times New Roman", Times, serif`;
+      ctx.fillText('Sistema de Control de Asistencia', cx, mm(13));
 
-      // === CAPA 4: FOTO (sin marco) ===
-      let fotoDataUrl: string | null = null;
+      // Foto del estudiante
+      let fotoImg: HTMLImageElement | null = null;
       try {
         const res = await fetch(`/api/fotos/${est.id}`);
         if (res.ok) {
           const blob = await res.blob();
-          fotoDataUrl = await new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result as string);
-            reader.readAsDataURL(blob);
+          fotoImg = await new Promise<HTMLImageElement>((resolve) => {
+            const img = new Image();
+            img.onload = () => resolve(img);
+            img.src = URL.createObjectURL(blob);
           });
         }
       } catch {}
 
-      const fotoX = 5, fotoY = 19, fotoW = 19, fotoH = 24;
+      const fX = mm(5), fY = mm(19), fW = mm(19), fH = mm(24);
 
-      if (fotoDataUrl) {
-        doc.addImage(fotoDataUrl, 'JPEG', fotoX, fotoY, fotoW, fotoH);
+      if (fotoImg) {
+        // Recortar foto para que llene el área sin distorsión
+        const imgRatio = fotoImg.width / fotoImg.height;
+        const areaRatio = fW / fH;
+        let sx = 0, sy = 0, sw = fotoImg.width, sh = fotoImg.height;
+        if (imgRatio > areaRatio) {
+          sw = fotoImg.height * areaRatio;
+          sx = (fotoImg.width - sw) / 2;
+        } else {
+          sh = fotoImg.width / areaRatio;
+          sy = (fotoImg.height - sh) / 2;
+        }
+        ctx.drawImage(fotoImg, sx, sy, sw, sh, fX, fY, fW, fH);
+        URL.revokeObjectURL(fotoImg.src);
       } else {
-        doc.setFillColor(245, 242, 235);
-        doc.roundedRect(fotoX, fotoY, fotoW, fotoH, 1.5, 1.5, 'F');
-        doc.setTextColor(160, 140, 100);
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'bold');
-        doc.text('S/F', fotoX + fotoW / 2, fotoY + fotoH / 2 + 1, { align: 'center' });
+        ctx.fillStyle = '#F5F2EB';
+        ctx.fillRect(fX, fY, fW, fH);
+        ctx.fillStyle = '#A08C64';
+        ctx.font = `bold ${mm(3)}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('S/F', fX + fW / 2, fY + fH / 2);
       }
 
-      // === CAPA 5: QR (sin marco) ===
-      const qrX = w - 22, qrY = 21, qrSize = 17;
-      const qrDataUrl = await QRCode.toDataURL(est.uuid_qr || est.id, { width: 120, margin: 0, color: { dark: '#1a1a1a', light: '#ffffff' } });
-      doc.addImage(qrDataUrl, 'PNG', qrX, qrY, qrSize, qrSize);
+      // QR
+      const qrX = cardW - mm(22), qrY = mm(21), qrSz = mm(17);
+      try {
+        const qrDataUrl = await QRCode.toDataURL(est.uuid_qr || est.id, { width: 200, margin: 0, color: { dark: '#1a1a1a', light: '#ffffff' } });
+        const qrImg = await new Promise<HTMLImageElement>((resolve) => {
+          const img = new Image();
+          img.onload = () => resolve(img);
+          img.src = qrDataUrl;
+        });
+        ctx.drawImage(qrImg, qrX, qrY, qrSz, qrSz);
+      } catch {}
 
-      // === CAPA 6: DATOS DEL ESTUDIANTE (centro) ===
-      const infoX = 28;
-      const infoMaxW = qrX - infoX - 3;
-      const infoYStart = 22;
+      // === DATOS DEL ESTUDIANTE ===
+      const iX = mm(28);
+      const iMaxW = qrX - iX - mm(3);
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'alphabetic';
 
-      // Apellidos (principal)
-      doc.setTextColor(30, 30, 30);
-      doc.setFontSize(11);
-      doc.setFont('helvetica', 'bold');
-      doc.text((est.apellidos || '').toUpperCase(), infoX, infoYStart);
+      // Apellidos
+      ctx.fillStyle = '#1e1e1e';
+      ctx.font = `bold ${mm(3.8)}px Arial`;
+      ctx.fillText((est.apellidos || '').toUpperCase(), iX, mm(23));
 
       // Nombres
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(60, 60, 60);
-      doc.text((est.nombres || '').toUpperCase(), infoX, infoYStart + 6);
+      ctx.fillStyle = '#3c3c3c';
+      ctx.font = `${mm(3)}px Arial`;
+      ctx.fillText((est.nombres || '').toUpperCase(), iX, mm(28));
 
-      // Línea separadora dorada
-      doc.setDrawColor(212, 168, 83);
-      doc.setLineWidth(0.5);
-      doc.line(infoX, infoYStart + 8.5, infoX + infoMaxW, infoYStart + 8.5);
+      // Línea separadora
+      ctx.strokeStyle = '#D4A853';
+      ctx.lineWidth = mm(0.5);
+      ctx.beginPath();
+      ctx.moveTo(iX, mm(30.5));
+      ctx.lineTo(iX + iMaxW, mm(30.5));
+      ctx.stroke();
 
-      // DNI (caja)
-      const dniY = infoYStart + 11;
-      doc.setFillColor(250, 247, 238);
-      doc.roundedRect(infoX, dniY, infoMaxW, 5.5, 1.2, 1.2, 'F');
-      doc.setTextColor(120, 95, 40);
-      doc.setFontSize(5.5);
-      doc.setFont('helvetica', 'bold');
-      doc.text('DNI', infoX + 2, dniY + 3.5);
-      doc.setTextColor(30, 30, 30);
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'bold');
-      doc.text(est.dni || '—', infoX + 10, dniY + 3.5);
+      // DNI caja
+      const dniY = mm(33);
+      ctx.fillStyle = '#FAF7EE';
+      roundRect(ctx, iX, dniY, iMaxW, mm(5.5), mm(1.2));
+      ctx.fill();
+      ctx.fillStyle = '#785F28';
+      ctx.font = `bold ${mm(2)}px Arial`;
+      ctx.fillText('DNI', iX + mm(2), dniY + mm(3.5));
+      ctx.fillStyle = '#1e1e1e';
+      ctx.font = `bold ${mm(2.8)}px Arial`;
+      ctx.fillText(est.dni || '—', iX + mm(10), dniY + mm(3.5));
 
-      // Grado (caja)
-      const gradoY = dniY + 7.5;
-      doc.setFillColor(250, 247, 238);
-      doc.roundedRect(infoX, gradoY, infoMaxW, 5.5, 1.2, 1.2, 'F');
-      doc.setTextColor(120, 95, 40);
-      doc.setFontSize(5.5);
-      doc.setFont('helvetica', 'bold');
-      doc.text('GRADO', infoX + 2, gradoY + 3.5);
-      doc.setTextColor(30, 30, 30);
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'bold');
-      doc.text(`${est.alumno?.grado || '—'} — ${est.alumno?.seccion || '—'}`, infoX + 12, gradoY + 3.5);
+      // Grado caja
+      const gradoY = dniY + mm(7.5);
+      ctx.fillStyle = '#FAF7EE';
+      roundRect(ctx, iX, gradoY, iMaxW, mm(5.5), mm(1.2));
+      ctx.fill();
+      ctx.fillStyle = '#785F28';
+      ctx.font = `bold ${mm(2)}px Arial`;
+      ctx.fillText('GRADO', iX + mm(2), gradoY + mm(3.5));
+      ctx.fillStyle = '#1e1e1e';
+      ctx.font = `bold ${mm(2.8)}px Arial`;
+      ctx.fillText(`${est.alumno?.grado || '—'} — ${est.alumno?.seccion || '—'}`, iX + mm(12), gradoY + mm(3.5));
 
-      // === CAPA 7: PIE DE TARJETA ===
-      doc.setFillColor(250, 247, 240);
-      doc.rect(0, h - 7, w, 7, 'F');
-      doc.setDrawColor(212, 168, 83);
-      doc.setLineWidth(0.3);
-      doc.line(0, h - 7, w, h - 7);
-      doc.setTextColor(130, 105, 45);
-      doc.setFontSize(5.5);
-      doc.setFont('helvetica', 'bold');
-      doc.text('DOCUMENTO DE IDENTIFICACION ESTUDIANTIL', w / 2, h - 3.5, { align: 'center' });
+      // Pie
+      ctx.fillStyle = '#FAF7F0';
+      ctx.fillRect(0, cardH - mm(7), cardW, mm(7));
+      ctx.strokeStyle = '#D4A853';
+      ctx.lineWidth = mm(0.3);
+      ctx.beginPath();
+      ctx.moveTo(0, cardH - mm(7));
+      ctx.lineTo(cardW, cardH - mm(7));
+      ctx.stroke();
+      ctx.fillStyle = '#82692D';
+      ctx.font = `bold ${mm(2)}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.fillText('DOCUMENTO DE IDENTIFICACION ESTUDIANTIL', cardW / 2, cardH - mm(3.5));
 
-      doc.save(`carnet-${est.dni || est.id}.pdf`);
+      // Descargar PNG
+      const link = document.createElement('a');
+      link.download = `carnet-${est.dni || est.id}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
       toast.success('Carnet descargado');
     } catch {
       toast.error('Error al generar carnet');
     }
   };
+
+  function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+  }
 
   const diasEnMes = new Date(historialAno, historialMes + 1, 0).getDate();
   const primerDiaSem = new Date(historialAno, historialMes, 1).getDay();
