@@ -363,7 +363,7 @@ export default function GradoPage() {
       doc.setFillColor(212, 168, 83);
       doc.rect(0, 15, w, 0.8, 'F');
 
-      // === CAPA 3: LOGO / ESCUDO (sin marco) ===
+      // === CAPA 3: LOGO / ESCUDO (cubre todo el header) ===
       try {
         const logoRes = await fetch('/logo.png');
         if (logoRes.ok) {
@@ -373,11 +373,16 @@ export default function GradoPage() {
             reader.onload = () => resolve(reader.result as string);
             reader.readAsDataURL(logoBlob);
           });
-          doc.addImage(logoDataUrl, 'PNG', 3, 1.5, 11, 11);
+          // Logo grande centrado que cubre casi todo el header
+          const logoW = 22;
+          const logoH = 14;
+          const logoX = (w - logoW) / 2;
+          const logoY = 0.5;
+          doc.addImage(logoDataUrl, 'PNG', logoX, logoY, logoW, logoH);
         }
       } catch {}
 
-      // Texto institucional centrado
+      // Texto institucional superpuesto al header
       const textCenterX = w / 2;
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(10);
