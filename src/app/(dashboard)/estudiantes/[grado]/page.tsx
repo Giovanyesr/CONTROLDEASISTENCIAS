@@ -371,7 +371,7 @@ export default function GradoPage() {
       ctx.fillStyle = '#D4A853';
       ctx.fillRect(0, mm(15), cardW, mm(0.8));
 
-      // Logo centrado que cubre el header
+      // Logo a la izquierda del header
       try {
         const logoRes = await fetch('/logo.png');
         if (logoRes.ok) {
@@ -383,8 +383,7 @@ export default function GradoPage() {
           });
           const logoH = mm(14);
           const logoW = logoH * (logoImg.width / logoImg.height);
-          const logoX = (cardW - logoW) / 2;
-          ctx.drawImage(logoImg, logoX, mm(0.5), logoW, logoH);
+          ctx.drawImage(logoImg, mm(2), mm(0.5), logoW, logoH);
           URL.revokeObjectURL(logoImg.src);
         }
       } catch {}
